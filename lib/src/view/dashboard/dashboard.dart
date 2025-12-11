@@ -3,6 +3,7 @@
 
 import 'dart:io';
 
+import 'package:booking_desktop/src/view/search/search_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -32,6 +33,15 @@ class DashboardTab extends StatelessWidget {
     final cs = theme.colorScheme;
 
     return Scaffold(
+      appBar: AppBar(
+        title: Text('Hotel Manager'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () => Get.to(() => GlobalSearchPage()),
+          ),
+        ],
+      ),
       backgroundColor: theme.colorScheme.background,
       body: SafeArea(
         child: RefreshIndicator(
@@ -88,8 +98,6 @@ class DashboardTab extends StatelessWidget {
                   const SizedBox(height: 8),
                   Obx(() => _overviewGrid(context, columns: 3)),
                   const SizedBox(height: 24),
-                  _sectionTitle('Bookings'),
-                  const SizedBox(height: 8),
                   _sectionBookings(),
                 ],
               ),
@@ -410,31 +418,47 @@ class DashboardTab extends StatelessWidget {
 
     return DefaultTabController(
       length: 3,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TabBar(
-            labelColor: AppColors.primary,
-            unselectedLabelColor: AppColors.textSecondary,
-            indicatorColor: AppColors.primary,
-            tabs: const [
-              Tab(text: 'Active'),
-              Tab(text: 'Completed'),
-              Tab(text: 'Cancelled'),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 340,
-            child: TabBarView(
-              children: [
-                _bookingList(activeBookings),
-                _bookingList(completedBookings),
-                _bookingList(cancelledBookings),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: _sectionTitle('Guest Logs'),
+            ),
+            TabBar(
+              labelColor: AppColors.primary,
+              unselectedLabelColor: AppColors.textSecondary,
+              indicatorColor: AppColors.primary,
+              tabs: const [
+                Tab(text: 'Active'),
+                Tab(text: 'Completed'),
+                Tab(text: 'Cancelled'),
               ],
             ),
-          ),
-        ],
+            SizedBox(
+              height: 280,
+              child: TabBarView(
+                children: [
+                  _bookingList(activeBookings),
+                  _bookingList(completedBookings),
+                  _bookingList(cancelledBookings),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   });
@@ -450,16 +474,13 @@ class DashboardTab extends StatelessWidget {
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       shrinkWrap: true,
       physics: const AlwaysScrollableScrollPhysics(),
       itemCount: bookings.length.clamp(0, 12),
       separatorBuilder:
-          (_, __) => const Divider(
-            height: 10,
-            thickness: 1,
-            color: Colors.transparent,
-          ),
+          (_, __) =>
+              const Divider(height: 1, color: Color(0xFFE5E5EA), thickness: 1),
       itemBuilder: (_, i) {
         final b = bookings[i];
         final u = hc.users.firstWhereOrNull((x) => x['id'] == b['userId']);
@@ -476,86 +497,107 @@ class DashboardTab extends StatelessWidget {
 
         final imagePath = u?['image'] as String?;
 
-        return GestureDetector(
-          onTap:
-              () => Get.to(
-                () => BookingDetailPage(
-                  bookingId: int.tryParse(b['id'].toString()) ?? -1,
-                ),
-              ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: AppColors.shadow.withValues(alpha: 0.1),
-                  backgroundImage:
-                      imagePath != null && imagePath.isNotEmpty
-                          ? Image.file(File(imagePath)).image
-                          : null,
-                  child:
-                      imagePath == null || imagePath.isEmpty
-                          ? Text(
-                            u?['name'] != null && u!['name'].isNotEmpty
-                                ? u['name'][0]
-                                : '?',
-                          )
-                          : null,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${u?['name'] ?? 'Unknown'} - Room ${r?['number'] ?? 'N/A'}',
-                        style: const TextStyle(fontWeight: FontWeight.w500),
+        // Hover effect for desktop
+        return MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              bool isHover = false;
+              return GestureDetector(
+                onTap:
+                    () => Get.to(
+                      () => BookingDetailPage(
+                        bookingId: int.tryParse(b['id'].toString()) ?? -1,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${_fmt(b['checkIn'])} → ${_fmt(b['checkOut'])}',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    b['status'].toString().toUpperCase(),
-                    style: TextStyle(
-                      color: statusColor,
-                      fontWeight: FontWeight.bold,
+                    ),
+                child: MouseRegion(
+                  onEnter: (_) => setState(() => isHover = true),
+                  onExit: (_) => setState(() => isHover = false),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          isHover
+                              ? Colors.grey.withOpacity(0.05)
+                              : Colors.white,
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 22,
+                          backgroundColor: AppColors.shadow.withValues(
+                            alpha: 0.1,
+                          ),
+                          backgroundImage:
+                              imagePath != null && imagePath.isNotEmpty
+                                  ? Image.file(File(imagePath)).image
+                                  : null,
+                          child:
+                              imagePath == null || imagePath.isEmpty
+                                  ? Text(
+                                    u?['name'] != null && u!['name'].isNotEmpty
+                                        ? u['name'][0]
+                                        : '?',
+                                    style: const TextStyle(color: Colors.black),
+                                  )
+                                  : null,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${u?['name'] ?? 'Unknown'} - Room ${r?['number'] ?? 'N/A'}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 16,
+                                  color: Colors.black,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${_fmt(b['checkIn'])} → ${_fmt(b['checkOut'])}',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            b['status'].toString().toUpperCase(),
+                            style: TextStyle(
+                              color: statusColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ],
-            ),
+              );
+            },
           ),
         );
       },
     );
   }
-
 
 
   String _fmt(String? s) {

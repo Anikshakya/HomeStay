@@ -1,10 +1,10 @@
 import 'dart:io';
-import 'package:booking_desktop/src/app_config/styles.dart';
-import 'package:booking_desktop/src/view/booking/add_bookings.dart';
-import 'package:booking_desktop/src/view/booking/booking_details.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:booking_desktop/src/app_config/styles.dart';
 import 'package:booking_desktop/src/controllers/hotel_controller.dart';
+import 'package:booking_desktop/src/view/booking/add_bookings.dart';
+import 'package:booking_desktop/src/view/booking/booking_details.dart';
 
 class BookingList extends StatefulWidget {
   const BookingList({super.key});
@@ -13,14 +13,17 @@ class BookingList extends StatefulWidget {
   State<BookingList> createState() => _BookingListState();
 }
 
-class _BookingListState extends State<BookingList> {
+class _BookingListState extends State<BookingList>
+    with SingleTickerProviderStateMixin {
   final HotelController hc = HotelController.to;
   final TextEditingController searchController = TextEditingController();
+  late TabController _tabController;
   RxString searchText = ''.obs;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     searchController.addListener(() {
       searchText.value = searchController.text.trim().toLowerCase();
     });
@@ -29,86 +32,133 @@ class _BookingListState extends State<BookingList> {
   @override
   void dispose() {
     searchController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
-  List _filterBookings(String status) {
-    final filtered =
-        hc.bookings.where((b) => b['status'] == status).where((b) {
-          final user = hc.users.firstWhereOrNull((u) => u['id'] == b['userId']);
-          if (user == null) return false;
-          final name = (user['name'] ?? '').toString().toLowerCase();
-          final phone = (user['phone'] ?? '').toString().toLowerCase();
-          final query = searchText.value;
-          return name.contains(query) || phone.contains(query);
-        }).toList();
-    return filtered;
+  List _filterBookings(String tabStatus) {
+    final List<String> statuses =
+        tabStatus == 'Current Guests'
+            ? ['booked', 'checked_in']
+            : ['checked_out'];
+
+    return hc.bookings.where((b) => statuses.contains(b['status'])).where((b) {
+      final user = hc.users.firstWhereOrNull((u) => u['id'] == b['userId']);
+      if (user == null) return false;
+      final query = searchText.value;
+      final room =
+          hc.rooms
+              .firstWhereOrNull((r) => r['id'] == b['roomId'])?['number']
+              .toString()
+              .toLowerCase();
+      return user['name'].toString().toLowerCase().contains(query) ||
+          user['phone'].toString().toLowerCase().contains(query) ||
+          (room ?? '').contains(query);
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text('Bookings'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: searchController,
-              decoration: InputDecoration(
-                hintText: 'Search by name or phone...',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ),
-        ),
+        elevation: 0,
       ),
       floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.add),
+        backgroundColor: AppColors.primary,
+        child: const Icon(Icons.add, color: Colors.white),
         onPressed: () => Get.to(() => AddBookingPage()),
       ),
       body: Obx(() {
-        // Rebuilds automatically when searchText changes
-        return DefaultTabController(
-          length: 3,
-          child: Column(
-            children: [
-              TabBar(
-                labelColor: AppColors.primary,
-                unselectedLabelColor: AppColors.textSecondary,
-                indicatorColor: AppColors.primary,
-                tabs: const [
-                  Tab(text: 'Current Guest'),
-                  Tab(text: 'Past Guest'),
-                  Tab(text: 'Cancelled'),
+        return Column(
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 10),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _bookingGrid(_filterBookings('Current Guests'), width),
+                  _bookingGrid(_filterBookings('Past Guests'), width),
                 ],
               ),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    _bookingList(
-                      _filterBookings('booked') + _filterBookings('checked_in'),
-                    ),
-                    _bookingList(_filterBookings('checked_out')),
-                    _bookingList(_filterBookings('cancelled')),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         );
       }),
     );
   }
 
-  Widget _bookingList(List bookings) {
+  Widget _buildHeader() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        children: [
+          _buildSearchBar(),
+          const SizedBox(height: 10),
+          _buildTabBar(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(15.0),
+      ),
+      child: TextField(
+        controller: searchController,
+        decoration: InputDecoration(
+          hintText: 'Search by guest name or room...',
+          hintStyle: TextStyle(color: AppColors.textSecondary),
+          prefixIcon: Icon(
+            Icons.search,
+            color: AppColors.textSecondary.withOpacity(0.6),
+          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 15.0,
+            horizontal: 10.0,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(
+        color: AppColors.shadow.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(10.0),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        labelColor: AppColors.primary,
+        unselectedLabelColor: AppColors.textSecondary,
+        tabs: const [Tab(text: 'Current Guests'), Tab(text: 'Past Guests')],
+      ),
+    );
+  }
+
+  Widget _bookingGrid(List bookings, double width) {
     if (bookings.isEmpty) {
       return Center(
         child: Text(
@@ -118,99 +168,188 @@ class _BookingListState extends State<BookingList> {
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+    final isDesktop = width > 1000;
+    final isTablet = width > 600 && width <= 1000;
+    final crossAxisCount =
+        isDesktop
+            ? 3
+            : isTablet
+            ? 2
+            : 1;
+
+    return GridView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        mainAxisExtent: 160,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
       itemCount: bookings.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (_, i) {
         final b = bookings[i];
         final u = hc.users.firstWhereOrNull((x) => x['id'] == b['userId']);
         final r = hc.rooms.firstWhereOrNull((x) => x['id'] == b['roomId']);
+        return _bookingCard(b, u, r);
+      },
+    );
+  }
 
-        final statusColor =
-            b['status'] == 'booked'
-                ? AppColors.booked
-                : b['status'] == 'checked_in'
-                ? AppColors.checkedIn
-                : b['status'] == 'checked_out'
-                ? AppColors.checkedOut
-                : AppColors.error;
+  Widget _bookingCard(Map b, Map? u, Map? r) {
+    final status = b['status'];
+    String displayStatus;
+    Color statusColor;
 
-        final imagePath = u?['image'] as String?;
+    if (status == 'checked_in') {
+      displayStatus = 'Checked-in';
+      statusColor = Colors.green;
+    } else if (status == 'booked') {
+      displayStatus = 'Booked';
+      statusColor = Colors.orange;
+    } else {
+      displayStatus = status.toString();
+      statusColor = AppColors.textSecondary.withOpacity(0.5);
+    }
 
-        return Card(
-          elevation: 1,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          color: AppColors.surface,
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ),
-            leading: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 6,
-                  height: double.infinity,
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+    final imagePath = u?['image'] as String?;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        elevation: 2,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap:
+              () => Get.to(
+                () => BookingDetailPage(
+                  bookingId: int.tryParse(b['id'].toString()) ?? -1,
                 ),
-                const SizedBox(width: 8),
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: AppColors.shadow.withValues(alpha: 0.1),
-                  backgroundImage:
-                      imagePath != null && imagePath.isNotEmpty
-                          ? File(imagePath).existsSync()
-                              ? Image.file(File(imagePath)).image
-                              : null
-                          : null,
-                  child:
-                      imagePath == null || imagePath.isEmpty
-                          ? Text(
-                            u?['name'] != null && u!['name'].isNotEmpty
-                                ? u['name'][0]
-                                : '?',
-                          )
-                          : null,
+              ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: AppColors.shadow.withOpacity(0.1),
+                      backgroundImage:
+                          imagePath != null && imagePath.isNotEmpty
+                              ? File(imagePath).existsSync()
+                                  ? Image.file(File(imagePath)).image
+                                  : null
+                              : null,
+                      child:
+                          (imagePath == null || imagePath.isEmpty)
+                              ? Text(
+                                u?['name'] != null && u!['name'].isNotEmpty
+                                    ? u['name'][0]
+                                    : '?',
+                                style: TextStyle(color: AppColors.primary),
+                              )
+                              : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            u?['name'] ?? 'Unknown Guest',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            r?['name'] ?? 'Room ${r?['number'] ?? 'N/A'}',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            '${_fmt(b['checkIn'])} - ${_fmt(b['checkOut'])}',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Text(
+                        displayStatus.toUpperCase(),
+                        style: TextStyle(
+                          color: statusColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Divider(height: 1, color: Colors.grey[200]),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    _buildActionButton(
+                      icon: Icons.call,
+                      label: 'Call',
+                      onPressed: () {
+                        /* Call logic */
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _buildActionButton(
+                      icon: Icons.message,
+                      label: 'Message',
+                      onPressed: () {
+                        /* Message logic */
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
-            title: Text(
-              '${u?['name'] ?? 'Unknown'} - Room ${r?['number'] ?? 'N/A'}',
-            ),
-            subtitle: Text(
-              '${_fmt(b['checkIn'])} → ${_fmt(b['checkOut'])}',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-            trailing: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                b['status'].toString().toUpperCase(),
-                style: TextStyle(
-                  color: statusColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            onTap:
-                () => Get.to(
-                  () => BookingDetailPage(
-                    bookingId: int.tryParse(b['id'].toString()) ?? -1,
-                  ),
-                ),
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return TextButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18, color: AppColors.primary),
+      label: Text(
+        label,
+        style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
+      ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        backgroundColor: AppColors.primary.withOpacity(0.1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
     );
   }
 
@@ -218,6 +357,28 @@ class _BookingListState extends State<BookingList> {
     if (s == null) return '-';
     final dt = DateTime.tryParse(s);
     if (dt == null) return s;
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+
+    const List<String> months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[dt.month - 1]} ${dt.day}';
+  }
+}
+
+extension StringExtension on String {
+  String? get capitalizeFirst {
+    if (isEmpty) return this;
+    return "${this[0].toUpperCase()}${substring(1)}";
   }
 }

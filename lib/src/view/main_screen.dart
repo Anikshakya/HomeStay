@@ -28,15 +28,6 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Hotel Manager'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.search),
-            onPressed:() => Get.to(() => GlobalSearchPage()),
-          ),
-        ],
-      ),
       body: SafeArea(
         child: Obx(() {
           if (hc.loading.value) {
