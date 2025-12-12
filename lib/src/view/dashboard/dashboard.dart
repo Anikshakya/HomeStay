@@ -9,12 +9,9 @@ import 'package:intl/intl.dart';
 import 'package:booking_desktop/src/app_config/styles.dart';
 import 'package:booking_desktop/src/controllers/hotel_controller.dart';
 import 'package:booking_desktop/src/view/booking/booking_details.dart';
-import 'package:booking_desktop/src/view/booking/booking_tab.dart';
 import 'package:booking_desktop/src/view/calendar/calendar_tab.dart';
 import 'package:booking_desktop/src/view/others/user_list_page.dart';
-import 'package:booking_desktop/src/view/room/add_room.dart';
 import 'package:booking_desktop/src/view/room/room.dart';
-import 'package:booking_desktop/src/view/service/add_service_page.dart';
 import 'package:booking_desktop/src/view/service/service.dart';
 
 class DashboardTab extends StatelessWidget {
@@ -31,7 +28,7 @@ class DashboardTab extends StatelessWidget {
     final cs = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async => hc.loadAll(),
@@ -95,36 +92,6 @@ class DashboardTab extends StatelessWidget {
     );
   }
 
-  Widget _buildTablet(BuildContext context, ColorScheme cs) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          const SizedBox(height: 12),
-          _brand(context),
-          const SizedBox(height: 16),
-          _sectionTitle('Overview'),
-          const SizedBox(height: 8),
-          Obx(() => _overviewGrid(context, columns: 2)),
-          const SizedBox(height: 24),
-          _sectionTitle('Bookings'),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 400,
-            child: _sectionBookings(),
-          ), // fixed approx height for tablet
-          const SizedBox(height: 24),
-          _sectionTitle('Quick Actions'),
-          _quickActionsGrid(context, crossAxisCount: 2),
-          const SizedBox(height: 24),
-          _sectionTitle('Calendar'),
-          SizedBox(height: 380, child: CalendarTab()),
-          const SizedBox(height: 40),
-        ],
-      ),
-    );
-  }
 
   Widget _buildMobile(BuildContext context, ColorScheme cs) {
     return Padding(
@@ -308,63 +275,6 @@ class DashboardTab extends StatelessWidget {
     );
   }
 
-  Widget _quickActionsGrid(BuildContext context, {int crossAxisCount = 2}) {
-    final actions = [
-      _QuickAction(
-        icon: Icons.meeting_room,
-        label: 'Add Room',
-        onTap: () => Get.to(() => AddRoomPage()),
-      ),
-      _QuickAction(
-        icon: Icons.room_service,
-        label: 'Add Service',
-        onTap: () => Get.to(() => AddServicePage()),
-      ),
-      _QuickAction(
-        icon: Icons.book_online,
-        label: 'Create Booking',
-        onTap: () => Get.to(() => BookingList()),
-      ),
-      _QuickAction(
-        icon: Icons.calendar_today,
-        label: 'Open Calendar',
-        onTap: () => Get.to(() => CalendarTab()),
-      ),
-    ];
-
-    return GridView.builder(
-      padding: EdgeInsets.zero,
-      physics: const NeverScrollableScrollPhysics(),
-      shrinkWrap: true,
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        mainAxisExtent: 92,
-      ),
-      itemCount: actions.length,
-      itemBuilder: (_, i) {
-        return ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            elevation: 3,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: const EdgeInsets.all(12),
-          ),
-          onPressed: actions[i].onTap,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(actions[i].icon, size: 28),
-              const SizedBox(height: 6),
-              Text(actions[i].label, style: const TextStyle(fontSize: 13)),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   // ---------------------- Booking Section ----------------------
 
@@ -380,8 +290,7 @@ class DashboardTab extends StatelessWidget {
     }
 
     final activeBookings =
-        hc.bookings
-            .where(
+        hc.bookings.where(
               (b) => b['status'] == 'booked' || b['status'] == 'checked_in',
             )
             .toList();
@@ -398,7 +307,7 @@ class DashboardTab extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha:0.03),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -494,7 +403,7 @@ class DashboardTab extends StatelessWidget {
                     decoration: BoxDecoration(
                       color:
                           isHover
-                              ? Colors.grey.withOpacity(0.05)
+                              ? Colors.grey.withValues(alpha:0.05)
                               : Colors.white,
                     ),
                     child: Row(
@@ -582,12 +491,6 @@ class DashboardTab extends StatelessWidget {
 
 // ---------------------- Helpers ----------------------
 
-class _QuickAction {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  _QuickAction({required this.icon, required this.label, required this.onTap});
-}
 
 class _StatCardData {
   final String title;

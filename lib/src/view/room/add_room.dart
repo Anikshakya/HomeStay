@@ -73,16 +73,15 @@ class _AddRoomPageState extends State<AddRoomPage> {
   Future<void> pickImages() async {
     final picker = ImagePicker();
     final picked = await picker.pickMultiImage(imageQuality: 80);
-    if (picked != null) {
-      setState(() => images.addAll(picked.map((e) => e.path)));
+    setState(() => images.addAll(picked.map((e) => e.path)));
     }
-  }
 
   void removeImage(int index) {
     setState(() {
       images.removeAt(index);
-      if (selectedImageIndex >= images.length)
+      if (selectedImageIndex >= images.length) {
         selectedImageIndex = images.length - 1;
+      }
       pageController.jumpToPage(selectedImageIndex);
     });
   }
@@ -248,7 +247,7 @@ class _AddRoomPageState extends State<AddRoomPage> {
           _sectionTitle('Room Preview'),
           SizedBox(height: 12),
           if (images.isNotEmpty)
-            Container(
+            SizedBox(
               height: 250,
               child: Stack(
                 children: [

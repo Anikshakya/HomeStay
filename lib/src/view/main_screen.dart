@@ -16,15 +16,15 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   final HotelController hc = Get.put(HotelController());
 
-  int idx = 2; // Default (Food)
+  int idx = 2; // Default page
 
   final List<Widget> pages = [
-    DashboardTab(), // 0
-    BookingList(), // 1
-    RoomsTab(), // 3
+    DashboardTab(),
+    BookingList(),
+    RoomsTab(),
     ServicesTab(),
-    Center(child: Text("Billing")), // 4
-    Center(child: Text("Reports")), // 5
+    const Center(child: Text("Billing")),
+    const Center(child: Text("Reports")),
   ];
 
   @override
@@ -45,9 +45,7 @@ class _MainScreenState extends State<MainScreen> {
               if (isDesktop) {
                 return Row(
                   children: [
-                    // ===================================================================
-                    // CUSTOM SIDEBAR – PRODUCTION QUALITY
-                    // ===================================================================
+                    // ======================== SIDEBAR ========================
                     Container(
                       width: 260,
                       margin: const EdgeInsets.all(12),
@@ -57,7 +55,7 @@ class _MainScreenState extends State<MainScreen> {
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
+                            color: Colors.black.withValues(alpha:0.08),
                             blurRadius: 20,
                             spreadRadius: 1,
                             offset: const Offset(0, 4),
@@ -67,11 +65,9 @@ class _MainScreenState extends State<MainScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // ----------------------------- LOGO AREA -----------------------------
+                          // Logo
                           Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 18.0,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 18),
                             child: Row(
                               children: const [
                                 Icon(Icons.star, color: primaryColor, size: 30),
@@ -86,13 +82,16 @@ class _MainScreenState extends State<MainScreen> {
                               ],
                             ),
                           ),
-
                           const Padding(
                             padding: EdgeInsets.only(top: 16),
-                            child: Divider(thickness: 1, height: 1, indent: 15, endIndent: 15,),
+                            child: Divider(
+                              thickness: 1,
+                              height: 1,
+                              indent: 15,
+                              endIndent: 15,
+                            ),
                           ),
-
-                          // ----------------------------- MENU LIST -----------------------------
+                          // Menu
                           Expanded(
                             child: ListView(
                               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -121,8 +120,8 @@ class _MainScreenState extends State<MainScreen> {
                                 _menuTile(
                                   index: 3,
                                   label: "Food",
-                                  icon: Icons.people_outline,
-                                  selectedIcon: Icons.people,
+                                  icon: Icons.fastfood_outlined,
+                                  selectedIcon: Icons.fastfood,
                                   color: primaryColor,
                                 ),
                                 _menuTile(
@@ -145,10 +144,7 @@ class _MainScreenState extends State<MainScreen> {
                         ],
                       ),
                     ),
-
-                    // ===================================================================
-                    // CONTENT AREA – WITH MATCHING SHADOW
-                    // ===================================================================
+                    // ======================== CONTENT ========================
                     Expanded(
                       child: Container(
                         margin: const EdgeInsets.fromLTRB(0, 12, 12, 12),
@@ -158,7 +154,7 @@ class _MainScreenState extends State<MainScreen> {
                           borderRadius: BorderRadius.circular(18),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
+                              color: Colors.black.withValues(alpha:0.08),
                               blurRadius: 20,
                               spreadRadius: 1,
                               offset: const Offset(0, 4),
@@ -175,16 +171,11 @@ class _MainScreenState extends State<MainScreen> {
                 );
               }
 
-              // ============================================================
-              // MOBILE/TABLET UI - PAGES ONLY
-              // ============================================================
+              // ======================== MOBILE / TABLET ========================
               return pages[idx];
             }),
           ),
-
-          // ============================================================
-          // MOBILE BOTTOM NAV BAR
-          // ============================================================
+          // ======================== BOTTOM NAV ========================
           bottomNavigationBar:
               isDesktop
                   ? null
@@ -201,7 +192,7 @@ class _MainScreenState extends State<MainScreen> {
                         label: "Bookings",
                       ),
                       NavigationDestination(
-                        icon: Icon(Icons.people),
+                        icon: Icon(Icons.fastfood),
                         label: "Services",
                       ),
                       NavigationDestination(
@@ -223,9 +214,7 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // ===================================================================
-  // CUSTOM MENU TILE WIDGET
-  // ===================================================================
+  // ======================== CUSTOM MENU TILE ========================
   Widget _menuTile({
     required int index,
     required String label,
@@ -242,7 +231,7 @@ class _MainScreenState extends State<MainScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.12) : Colors.transparent,
+          color: isSelected ? color.withValues(alpha:0.12) : Colors.transparent,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(

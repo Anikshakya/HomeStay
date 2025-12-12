@@ -118,7 +118,7 @@ class _BookingListState extends State<BookingList>
           hintStyle: TextStyle(color: AppColors.textSecondary),
           prefixIcon: Icon(
             Icons.search,
-            color: AppColors.textSecondary.withOpacity(0.6),
+            color: AppColors.textSecondary.withValues(alpha:0.6),
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
@@ -134,7 +134,7 @@ class _BookingListState extends State<BookingList>
     return Container(
       height: 40,
       decoration: BoxDecoration(
-        color: AppColors.shadow.withOpacity(0.05),
+        color: AppColors.shadow.withValues(alpha:0.05),
         borderRadius: BorderRadius.circular(10.0),
       ),
       child: TabBar(
@@ -145,7 +145,7 @@ class _BookingListState extends State<BookingList>
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha:0.05),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -208,7 +208,7 @@ class _BookingListState extends State<BookingList>
       statusColor = Colors.orange;
     } else {
       displayStatus = status.toString();
-      statusColor = AppColors.textSecondary.withOpacity(0.5);
+      statusColor = AppColors.textSecondary.withValues(alpha:0.5);
     }
 
     final imagePath = u?['image'] as String?;
@@ -235,7 +235,7 @@ class _BookingListState extends State<BookingList>
                   children: [
                     CircleAvatar(
                       radius: 28,
-                      backgroundColor: AppColors.shadow.withOpacity(0.1),
+                      backgroundColor: AppColors.shadow.withValues(alpha:0.1),
                       backgroundImage:
                           imagePath != null && imagePath.isNotEmpty
                               ? File(imagePath).existsSync()
@@ -288,7 +288,7 @@ class _BookingListState extends State<BookingList>
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.15),
+                        color: statusColor.withValues(alpha:0.15),
                         borderRadius: BorderRadius.circular(15),
                       ),
                       child: Text(
@@ -347,7 +347,7 @@ class _BookingListState extends State<BookingList>
       ),
       style: TextButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        backgroundColor: AppColors.primary.withOpacity(0.1),
+        backgroundColor: AppColors.primary.withValues(alpha:0.1),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );

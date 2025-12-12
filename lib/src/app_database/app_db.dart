@@ -29,7 +29,8 @@ class DatabaseRepo {
         type VARCHAR(100),
         price DOUBLE,
         active TINYINT DEFAULT 1,
-        images TEXT
+        images TEXT,
+        description TEXT
       )
     ''');
 
@@ -39,9 +40,13 @@ class DatabaseRepo {
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(150),
         price DOUBLE,
-        active TINYINT DEFAULT 1
+        active TINYINT DEFAULT 1,
+        category VARCHAR(50),
+        description VARCHAR(200),
+        images TEXT
       )
     ''');
+
 
     // users table
     await _conn.query('''
@@ -95,18 +100,34 @@ class DatabaseRepo {
 
   Future<int> insertRoom(Map<String, dynamic> r) async {
     final res = await _conn.query(
-      'INSERT INTO rooms (number, type, price, active, images) VALUES (?, ?, ?, ?, ?)',
-      [r['number'], r['type'], r['price'], r['active'], r['images']],
+      'INSERT INTO rooms (number, type, price, active, images, description) VALUES (?, ?, ?, ?, ?, ?)',
+      [
+        r['number'],
+        r['type'],
+        r['price'],
+        r['active'],
+        r['images'],
+        r['description'],
+      ],
     );
     return res.insertId ?? 0;
   }
 
   Future<void> updateRoom(int id, Map<String, dynamic> r) async {
     await _conn.query(
-      'UPDATE rooms SET number=?, type=?, price=?, active=?, images=? WHERE id=?',
-      [r['number'], r['type'], r['price'], r['active'], r['images'], id],
+      'UPDATE rooms SET number=?, type=?, price=?, active=?, images=?, description=? WHERE id=?',
+      [
+        r['number'],
+        r['type'],
+        r['price'],
+        r['active'],
+        r['images'],
+        r['description'],
+        id,
+      ],
     );
   }
+
 
   Future<void> deleteRoom(int id) async {
     await _conn.query('DELETE FROM rooms WHERE id=?', [id]);
@@ -122,18 +143,34 @@ class DatabaseRepo {
 
   Future<int> insertService(Map<String, dynamic> s) async {
     final res = await _conn.query(
-      'INSERT INTO services (name, price, active) VALUES (?, ?, ?)',
-      [s['name'], s['price'], s['active']],
+      'INSERT INTO services (name, price, active, category, description, images) VALUES (?, ?, ?, ?, ?, ?)',
+      [
+        s['name'],
+        s['price'],
+        s['active'],
+        s['category'],
+        s['description'],
+        s['images'],
+      ],
     );
     return res.insertId ?? 0;
   }
 
   Future<void> updateService(int id, Map<String, dynamic> s) async {
     await _conn.query(
-      'UPDATE services SET name=?, price=?, active=? WHERE id=?',
-      [s['name'], s['price'], s['active'], id],
+      'UPDATE services SET name=?, price=?, active=?, category=?, description=?, images=? WHERE id=?',
+      [
+        s['name'],
+        s['price'],
+        s['active'],
+        s['category'],
+        s['description'],
+        s['images'],
+        id,
+      ],
     );
   }
+
 
   Future<void> deleteService(int id) async {
     await _conn.query('DELETE FROM services WHERE id=?', [id]);

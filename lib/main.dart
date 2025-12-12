@@ -1,18 +1,11 @@
 import 'package:booking_desktop/src/app_config/styles.dart';
-import 'package:booking_desktop/src/app_database/sqlite_db.dart';
 import 'package:booking_desktop/src/view/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-
-// Commands to change password
-//mysql -u root -p
-// ALTER USER 'root'@'localhost' IDENTIFIED BY '1234';
-// FLUSH PRIVILEGES;
-
-void main() async{
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // await DB.init();
+  // await DB.init(); // Initialize your database if needed
   runApp(const HotelManagerApp());
 }
 
@@ -46,7 +39,7 @@ class HotelManagerApp extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
         ),
         appBarTheme: AppBarTheme(
@@ -55,7 +48,7 @@ class HotelManagerApp extends StatelessWidget {
           foregroundColor: AppColors.primaryForeground,
         ),
       ),
-      home: MainScreen(),
+      home: const MainScreen(),
     );
   }
 }
