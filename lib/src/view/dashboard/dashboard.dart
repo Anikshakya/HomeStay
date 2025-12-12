@@ -2,8 +2,6 @@
 // Production-ready, responsive Material 3 Dashboard widget for Flutter (GetX-friendly)
 
 import 'dart:io';
-
-import 'package:booking_desktop/src/view/search/search_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -33,15 +31,6 @@ class DashboardTab extends StatelessWidget {
     final cs = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Hotel Manager'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.search),
-            onPressed: () => Get.to(() => GlobalSearchPage()),
-          ),
-        ],
-      ),
       backgroundColor: theme.colorScheme.background,
       body: SafeArea(
         child: RefreshIndicator(
@@ -49,11 +38,9 @@ class DashboardTab extends StatelessWidget {
           edgeOffset: 16,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              if (constraints.maxWidth >= kDesktopBreakpoint) {
-                return _buildDesktop(context, cs);
-              } else if (constraints.maxWidth >= kTabletBreakpoint) {
-                return _buildTablet(context, cs);
-              } else {
+              if (constraints.maxWidth >= kDesktopBreakpoint || constraints.maxWidth >= kTabletBreakpoint) {
+                return _buildDesktop(context, cs, constraints.maxHeight);
+              }  else {
                 return _buildMobile(context, cs);
               }
             },
@@ -65,42 +52,24 @@ class DashboardTab extends StatelessWidget {
 
   // ---------------------- Layout Variants ----------------------
 
-  Widget _buildDesktop(BuildContext context, ColorScheme cs) {
+  Widget _buildDesktop(BuildContext context, ColorScheme cs, double maxHeight) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Left column: navigation / quick actions
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 200),
+        // Main content
+        Expanded(
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _brand(context),
-                const SizedBox(height: 20),
-                _quickActionsGrid(context, crossAxisCount: 1),
+                _sectionTitle('Overview'),
+                const SizedBox(height: 8),
+                Obx(() => _overviewGrid(context, columns: 3)),
+                const SizedBox(height: 24),
+                // Use Expanded for TabBarView to avoid infinite height
+                Expanded(child: _sectionBookings()),
               ],
-            ),
-          ),
-        ),
-
-        // Main content
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _sectionTitle('Overview'),
-                  const SizedBox(height: 8),
-                  Obx(() => _overviewGrid(context, columns: 3)),
-                  const SizedBox(height: 24),
-                  _sectionBookings(),
-                ],
-              ),
             ),
           ),
         ),
@@ -114,7 +83,10 @@ class DashboardTab extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _sectionTitle('Calendar'),
-                Expanded(child: CalendarTab()),
+                Expanded(child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: CalendarTab())
+                ),
               ],
             ),
           ),
@@ -138,7 +110,10 @@ class DashboardTab extends StatelessWidget {
           const SizedBox(height: 24),
           _sectionTitle('Bookings'),
           const SizedBox(height: 8),
-          _sectionBookings(),
+          SizedBox(
+            height: 400,
+            child: _sectionBookings(),
+          ), // fixed approx height for tablet
           const SizedBox(height: 24),
           _sectionTitle('Quick Actions'),
           _quickActionsGrid(context, crossAxisCount: 2),
@@ -166,13 +141,10 @@ class DashboardTab extends StatelessWidget {
           const SizedBox(height: 24),
           _sectionTitle('Bookings'),
           const SizedBox(height: 8),
-          _sectionBookings(),
-          const SizedBox(height: 24),
-          _sectionTitle('Quick Actions'),
-          _quickActionsGrid(context, crossAxisCount: 2),
-          const SizedBox(height: 24),
-          _sectionTitle('Calendar'),
-          SizedBox(height: 320, child: CalendarTab()),
+          SizedBox(
+            height: 300,
+            child: _sectionBookings(),
+          ),
           const SizedBox(height: 40),
         ],
       ),
@@ -394,6 +366,8 @@ class DashboardTab extends StatelessWidget {
     );
   }
 
+  // ---------------------- Booking Section ----------------------
+
   Widget _sectionBookings() => Obx(() {
     if (hc.bookings.isEmpty) {
       return Padding(
@@ -434,7 +408,7 @@ class DashboardTab extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: _sectionTitle('Guest Logs'),
             ),
             TabBar(
@@ -447,8 +421,7 @@ class DashboardTab extends StatelessWidget {
                 Tab(text: 'Cancelled'),
               ],
             ),
-            SizedBox(
-              height: 280,
+            Expanded(
               child: TabBarView(
                 children: [
                   _bookingList(activeBookings),
@@ -495,7 +468,7 @@ class DashboardTab extends StatelessWidget {
                 ? AppColors.checkedOut
                 : AppColors.error;
 
-        final imagePath = u?['image'] as String?;
+        final imagePath = u?['idImagePath'] as String?;
 
         // Hover effect for desktop
         return MouseRegion(
@@ -598,7 +571,6 @@ class DashboardTab extends StatelessWidget {
       },
     );
   }
-
 
   String _fmt(String? s) {
     if (s == null) return '-';

@@ -1,4 +1,5 @@
 import 'package:booking_desktop/src/app_config/styles.dart';
+import 'package:booking_desktop/src/app_database/sqlite_db.dart';
 import 'package:booking_desktop/src/view/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -11,6 +12,7 @@ import 'package:get/get.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
+  // await DB.init();
   runApp(const HotelManagerApp());
 }
 

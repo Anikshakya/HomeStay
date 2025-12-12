@@ -49,7 +49,8 @@ class DatabaseRepo {
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(150),
         phone VARCHAR(50),
-        email VARCHAR(150)
+        email VARCHAR(150),
+        idImagePath TEXT
       )
     ''');
 
@@ -148,17 +149,18 @@ class DatabaseRepo {
 
   Future<int> insertUser(Map<String, dynamic> u) async {
     final res = await _conn.query(
-      'INSERT INTO users (name, phone, email) VALUES (?, ?, ?)',
-      [u['name'], u['phone'], u['email']],
+      'INSERT INTO users (name, phone, email, idImagePath) VALUES (?, ?, ?, ?)',
+      [u['name'], u['phone'], u['email'], u['idImagePath']],
     );
     return res.insertId ?? 0;
   }
 
   Future<void> updateUser(int id, Map<String, dynamic> u) async {
-    await _conn.query('UPDATE users SET name=?, phone=?, email=? WHERE id=?', [
+    await _conn.query('UPDATE users SET name=?, phone=?, email=?, idImagePath=? WHERE id=?', [
       u['name'],
       u['phone'],
       u['email'],
+      u['idImagePath'],
       id,
     ]);
   }

@@ -16,25 +16,18 @@ class _AddRoomPageState extends State<AddRoomPage> {
   final _form = GlobalKey<FormState>();
   final HotelController hc = HotelController.to;
 
-  final roomNameC = TextEditingController();
   final numberC = TextEditingController();
   final typeC = TextEditingController();
   final priceC = TextEditingController();
   final bedsC = TextEditingController(text: '1');
   final descC = TextEditingController();
   final amenitiesC = TextEditingController();
-  final areaC = TextEditingController();
 
   final List<String> categories = [
     'Standard King Room',
     'Deluxe Suite',
     'Family Room',
   ];
-  String? selectedCategory;
-  final List<String> occupancies = ['1', '2', '3', '4'];
-  String? selectedMaxOccupancy;
-  String? selectedMaxAdults;
-  String? selectedMaxChildren;
 
   bool ac = false;
   bool active = true;
@@ -46,29 +39,17 @@ class _AddRoomPageState extends State<AddRoomPage> {
   void initState() {
     super.initState();
     pageController = PageController(initialPage: 0);
-    selectedCategory = categories.first;
-    selectedMaxOccupancy = occupancies.first;
-    selectedMaxAdults = occupancies.first;
-    selectedMaxChildren = occupancies.first;
 
     if (widget.editRoom != null) {
       final r = widget.editRoom!;
-      roomNameC.text = r['room_name'] ?? '';
       numberC.text = r['number'] ?? '';
       typeC.text = r['type'] ?? '';
       priceC.text = (r['price'] ?? '').toString();
       bedsC.text = (r['beds'] ?? 1).toString();
-      areaC.text = r['area']?.toString() ?? '';
       descC.text = r['description'] ?? '';
       amenitiesC.text = (r['amenities'] ?? '').split(';').join(', ');
       ac = r['ac'] == 1;
       active = r['active'] == 1;
-      selectedCategory = r['category'] ?? selectedCategory;
-      selectedMaxOccupancy =
-          r['max_occupancy']?.toString() ?? selectedMaxOccupancy;
-      selectedMaxAdults = r['max_adults']?.toString() ?? selectedMaxAdults;
-      selectedMaxChildren =
-          r['max_children']?.toString() ?? selectedMaxChildren;
       images =
           (r['images'] as String? ?? '')
               .split(';')
@@ -80,14 +61,12 @@ class _AddRoomPageState extends State<AddRoomPage> {
   @override
   void dispose() {
     pageController.dispose();
-    roomNameC.dispose();
     numberC.dispose();
     typeC.dispose();
     priceC.dispose();
     bedsC.dispose();
     descC.dispose();
     amenitiesC.dispose();
-    areaC.dispose();
     super.dispose();
   }
 
@@ -111,13 +90,7 @@ class _AddRoomPageState extends State<AddRoomPage> {
   Future<void> save() async {
     if (!_form.currentState!.validate()) return;
     final map = {
-      'room_name': roomNameC.text.trim(),
       'number': numberC.text.trim(),
-      'area': int.tryParse(areaC.text.trim()) ?? 0,
-      'category': selectedCategory,
-      'max_occupancy': int.tryParse(selectedMaxOccupancy ?? '0') ?? 0,
-      'max_adults': int.tryParse(selectedMaxAdults ?? '0') ?? 0,
-      'max_children': int.tryParse(selectedMaxChildren ?? '0') ?? 0,
       'type': typeC.text.trim(),
       'price': double.tryParse(priceC.text.trim()) ?? 0,
       'beds': int.tryParse(bedsC.text.trim()) ?? 1,
@@ -146,21 +119,15 @@ class _AddRoomPageState extends State<AddRoomPage> {
   }
 
   void _clearForm() {
-    roomNameC.clear();
     numberC.clear();
     typeC.clear();
     priceC.clear();
     bedsC.text = '1';
     descC.clear();
     amenitiesC.clear();
-    areaC.clear();
     ac = false;
     active = true;
     images.clear();
-    selectedCategory = categories.first;
-    selectedMaxOccupancy = occupancies.first;
-    selectedMaxAdults = occupancies.first;
-    selectedMaxChildren = occupancies.first;
     selectedImageIndex = 0;
     pageController.jumpToPage(0);
     setState(() {});
@@ -213,16 +180,12 @@ class _AddRoomPageState extends State<AddRoomPage> {
           children: [
             _sectionTitle('Room Information'),
             SizedBox(height: 12),
-            _buildTextField(roomNameC, 'Room Name', isRequired: true),
-            SizedBox(height: 12),
             _buildTextField(
               numberC,
               'Room Number',
               keyboard: TextInputType.number,
               isRequired: true,
             ),
-            SizedBox(height: 12),
-            _buildTextField(areaC, 'Area (m²)', keyboard: TextInputType.number),
             SizedBox(height: 12),
             _buildTextField(typeC, 'Type (e.g Deluxe)'),
             SizedBox(height: 12),
@@ -385,9 +348,7 @@ class _AddRoomPageState extends State<AddRoomPage> {
             ),
           ],
           SizedBox(height: 16),
-          _roomDetailRow('Name', roomNameC.text),
           _roomDetailRow('Number', numberC.text),
-          _roomDetailRow('Area', '${areaC.text} m²'),
           _roomDetailRow('Type', typeC.text),
           _roomDetailRow('Price', '₨ ${priceC.text}'),
           _roomDetailRow('Beds', bedsC.text),

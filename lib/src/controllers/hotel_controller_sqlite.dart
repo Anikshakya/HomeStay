@@ -1,10 +1,8 @@
 // import 'dart:async';
 // import 'dart:io';
-// import 'package:csv/csv.dart';
+// import 'package:booking_desktop/src/app_database/sqlite_db.dart';
 // import 'package:get/get.dart';
-// import 'package:syuseiclub/src/database/db.dart';
 // import 'package:path_provider/path_provider.dart';
-// import 'package:path/path.dart' as p;
 
 // class HotelController extends GetxController {
 //   static HotelController get to => Get.find();
@@ -119,69 +117,13 @@
 //   }
 
 //   // Helpers
-//   List<Map<String, dynamic>> availableRoomsForRange(
-//     DateTime inDate,
-//     DateTime outDate,
-//   ) {
-//     final take = <int>{};
-//     for (final b in bookings) {
-//       if (b['status'] == 'checked_out') continue;
-//       final bIn = DateTime.parse(b['checkIn']);
-//       final bOut = DateTime.parse(b['checkOut']);
-//       final overlap = !(outDate.isBefore(bIn) || inDate.isAfter(bOut));
-//       if (overlap) take.add(b['roomId'] as int);
-//     }
-//     return rooms
-//         .where((r) => !take.contains(r['id'] as int) && (r['active'] == 1))
-//         .toList();
+//   availableRoomsForRange() {
+//     return "";
 //   }
 
 //   int activeUsersCount() => users.length;
-//   int activeRoomsCount() => rooms.where((r) => r['active'] == 1).length;
-//   int activeServicesCount() => services.where((s) => s['active'] == 1).length;
-//   // CSV
-//   Future<String> exportBookingsCsv() async {
-//     List<List<dynamic>> rows = [
-//       [
-//         'BookingId',
-//         'User',
-//         'Phone',
-//         'Room',
-//         'CheckIn',
-//         'CheckOut',
-//         'Services',
-//         'Total',
-//         'Status',
-//         'CreatedAt',
-//       ],
-//     ];
-//     for (final b in bookings) {
-//       final u = users.firstWhereOrNull((x) => x['id'] == b['userId']);
-//       final r = rooms.firstWhereOrNull((x) => x['id'] == b['roomId']);
-//       rows.add([
-//         b['id'],
-//         u != null ? u['name'] ?? '' : '',
-//         u != null ? u['phone'] ?? '' : '',
-//         r != null ? r['number'] ?? '' : '',
-//         b['checkIn'] ?? '',
-//         b['checkOut'] ?? '',
-//         b['services'] ?? '',
-//         b['total'] ?? '',
-//         b['status'] ?? '',
-//         b['createdAt'] ?? '',
-//       ]);
-//     }
-//     final csv = const ListToCsvConverter().convert(rows);
-//     final dir = await getApplicationDocumentsDirectory();
-//     final file = File(
-//       p.join(
-//         dir.path,
-//         'bookings_export_${DateTime.now().millisecondsSinceEpoch}.csv',
-//       ),
-//     );
-//     await file.writeAsString(csv);
-//     return file.path;
-//   }
+//   int activeRoomsCount() => rooms.where((r) => r['active'] == '1').length;
+//   int activeServicesCount() => services.where((s) => s['active'] == '1').length;
 
 //   // Services string <=> map
 //   Map<int, int> parseServicesString(String? s) {
