@@ -1,0 +1,524 @@
+import 'package:flutter/material.dart';
+
+// --- Theme Colors (Approximations) ---
+const Color _kPrimaryColor = Color(0xFF00E676); // Bright Green (for Check-in button and Status)
+const Color _kBackgroundColor = Color(0xFFF5F5F5); // Light Gray background - Added this back for Scaffold background
+const Color _kCardColor = Colors.white; // White card background
+const Color _kTextColor = Color(0xFF333333); // Dark Gray text
+
+// ==========================================================
+// 1. Responsive Layout Wrapper
+// ==========================================================
+
+class ResponsiveGuestLayout extends StatelessWidget {
+  final Widget leftPanel;
+  final Widget rightPanel;
+
+  const ResponsiveGuestLayout({
+    super.key,
+    required this.leftPanel,
+    required this.rightPanel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Determine the screen width
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Define the breakpoint for switching layout (e.g., 900 pixels)
+    const breakpoint = 900; 
+
+    if (screenWidth > breakpoint) {
+      // Desktop/Web Layout (Side-by-side using Row)
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          // Left Panel (New Guest Check-in)
+          Expanded(flex: 5, child: leftPanel),
+          const SizedBox(width: 32),
+          // Right Panel (Current Guests)
+          Expanded(flex: 7, child: rightPanel),
+        ],
+      );
+    } else {
+      // Mobile/Tablet Layout (Stacked using Column)
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          leftPanel,
+          const SizedBox(height: 32),
+          rightPanel,
+        ],
+      );
+    }
+  }
+}
+
+// ==========================================================
+// 2. Main Page (uses the new Responsive Layout)
+// ==========================================================
+
+class GuestManagementPage extends StatelessWidget {
+  const GuestManagementPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            // --- Header ---
+            const Text(
+              'Guest Management',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: _kTextColor,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Manage guest check-ins and view current stays.',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+            const SizedBox(height: 32),
+
+            // --- Main Content (Responsive Layout) ---
+            const ResponsiveGuestLayout(
+              leftPanel: NewGuestCheckInCard(),
+              rightPanel: CurrentGuestsCard(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+// ==========================================================
+// 3. Left Panel Widgets (Unchanged, styled as 'wounded containers')
+// ==========================================================
+
+class NewGuestCheckInCard extends StatelessWidget {
+  const NewGuestCheckInCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0, // Flat card style
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8), // Rounded corners
+      ),
+      color: _kCardColor,
+      child: Padding(
+        padding: const EdgeInsets.all(30.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const Text(
+              'New Guest Check-in',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: _kTextColor,
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Full Name Field
+            const Text('Full Name', style: TextStyle(fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            _buildTextField(hintText: "Enter guest's full name"),
+            const SizedBox(height: 16),
+
+            // Contact Number / Email Address Row
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Contact Number', style: TextStyle(fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 8),
+                      _buildTextField(hintText: "Enter contact no"),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Email Address', style: TextStyle(fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 8),
+                      _buildTextField(hintText: "Enter email add"),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // ID Proof Field (Drag & Drop Area)
+            const Text('ID Proof', style: TextStyle(fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            _buildDropArea(),
+            const SizedBox(height: 16),
+
+            // Number of Guests / Room Selection Row
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Number of Guests', style: TextStyle(fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 8),
+                      _buildDropdownField(text: '1'), // Simple text placeholder
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Room Selection', style: TextStyle(fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 8),
+                      _buildDropdownField(text: 'Select a room'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Arrival Date & Time
+            const Text('Arrival Date & Time', style: TextStyle(fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            _buildDateField(),
+            const SizedBox(height: 32),
+
+            // Check-in Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _kPrimaryColor,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Check-in Guest',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- Helper Widgets for Left Panel (for brevity, keeping original helper widgets) ---
+
+Widget _buildTextField({required String hintText}) {
+  return TextField(
+    decoration: InputDecoration(
+      hintText: hintText,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: _kPrimaryColor, width: 2),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    ),
+  );
+}
+
+Widget _buildDropdownField({required String text}) {
+  return Container(
+    height: 50,
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    decoration: BoxDecoration(
+      border: Border.all(color: const Color(0xFFE0E0E0)),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(text, style: const TextStyle(color: Colors.grey)),
+        const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+      ],
+    ),
+  );
+}
+
+Widget _buildDateField() {
+  return Container(
+    height: 50,
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    decoration: BoxDecoration(
+      border: Border.all(color: const Color(0xFFE0E0E0)),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: const Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text('mm/dd/yyyy, --:-- --', style: TextStyle(color: Colors.grey)),
+        Icon(Icons.calendar_month_outlined, color: Colors.grey),
+      ],
+    ),
+  );
+}
+
+Widget _buildDropArea() {
+  // Correcting the border style to BorderStyle.dashed to match the original image.
+  // Note: Flutter's BoxDecoration only supports BorderStyle.solid. 
+  // To get a true dashed line, you'd need a custom Paint or a package like `dotted_border`.
+  // For simplicity, I'll use a solid border that is very light gray, or simulate a dashed look 
+  // by using the original code's intention. Let's revert to the dashed simulation from the prior response
+  // or a slightly thicker solid light grey border. Sticking to the previous implementation:
+  return Container(
+    height: 120,
+    decoration: BoxDecoration(
+      border: Border.all(color: const Color(0xFFE0E0E0), style: BorderStyle.solid, width: 2),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.cloud_upload_outlined, size: 40, color: Colors.grey),
+          const SizedBox(height: 8),
+          RichText(
+            text: const TextSpan(
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+              children: [
+                TextSpan(
+                  text: 'Click to upload',
+                  style: TextStyle(color: _kPrimaryColor, fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: ' or drag and drop'),
+              ],
+            ),
+          ),
+          const Text('PNG, JPG or PDF (MAX. 5MB)',
+              style: TextStyle(fontSize: 10, color: Colors.grey)),
+        ],
+      ),
+    ),
+  );
+}
+
+// ==========================================================
+// 4. Right Panel Widgets (Unchanged, styled as 'wounded containers')
+// ==========================================================
+
+class CurrentGuestsCard extends StatelessWidget {
+  const CurrentGuestsCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0, // Flat card style
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8), // Rounded corners
+      ),
+      color: _kCardColor,
+      child: Padding(
+        padding: const EdgeInsets.all(30.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const Text(
+              'Current Guests',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: _kTextColor,
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Search Bar
+            _buildSearchBar(),
+            const SizedBox(height: 24),
+
+            // Guest Table
+            const GuestDataTable(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Widget _buildSearchBar() {
+  return Container(
+    height: 40,
+    decoration: BoxDecoration(
+      border: Border.all(color: const Color(0xFFE0E0E0)),
+      borderRadius: BorderRadius.circular(8),
+      color: Colors.white,
+    ),
+    child: const TextField(
+      decoration: InputDecoration(
+        hintText: 'Search by name or room...',
+        hintStyle: TextStyle(color: Colors.grey),
+        border: InputBorder.none,
+        prefixIcon: Icon(Icons.search, color: Colors.grey),
+        contentPadding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 10.0),
+      ),
+    ),
+  );
+}
+
+// --- DataTable Widget for Current Guests ---
+
+class Guest {
+  final String name;
+  final String room;
+  final String checkInDate;
+  final String status;
+
+  Guest(this.name, this.room, this.checkInDate, this.status);
+}
+
+final List<Guest> _guests = [
+  Guest('Olivia Martinez', '101', '2024-07-21', 'Checked-in'),
+  Guest('Benjamin Carter', '102', '2024-07-20', 'Checked-in'),
+  Guest('Sophia Lee', '201', '2024-07-19', 'Checked-in'),
+  // Add more mock data if needed
+];
+
+class GuestDataTable extends StatelessWidget {
+  const GuestDataTable({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Wrap the Table in a SingleChildScrollView for horizontal scrolling if needed on smaller screens
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Table(
+        columnWidths: const {
+          0: FixedColumnWidth(150), // Guest Name
+          1: FixedColumnWidth(60), // Room
+          2: FixedColumnWidth(100), // Check-in Date
+          3: FixedColumnWidth(100), // Status
+          4: FixedColumnWidth(60), // Actions
+        },
+        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+        children: [
+          // Table Header
+          TableRow(
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0))),
+            ),
+            children: [
+              _buildHeaderCell('Guest Name'),
+              _buildHeaderCell('Room'),
+              _buildHeaderCell('Check-in Date'),
+              _buildHeaderCell('Status'),
+              _buildHeaderCell('Actions'),
+            ],
+          ),
+          // Table Rows
+          ..._guests.map((guest) => TableRow(
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: Color(0xFFF0F0F0))),
+                ),
+                children: [
+                  _buildDataCell(Text(guest.name, style: const TextStyle(fontWeight: FontWeight.w500))),
+                  _buildDataCell(Text(guest.room)),
+                  _buildDataCell(Text(guest.checkInDate)),
+                  _buildDataCell(_buildStatusChip(guest.status)),
+                  _buildDataCell(_buildActionButton()),
+                ],
+              )),
+        ],
+      ),
+    );
+  }
+
+  TableCell _buildHeaderCell(String text) {
+    return TableCell(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12.0),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    );
+  }
+
+  TableCell _buildDataCell(Widget content) {
+    return TableCell(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12.0),
+        child: content,
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String status) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _kPrimaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.circle, color: _kPrimaryColor, size: 8),
+          const SizedBox(width: 4),
+          Text(
+            status,
+            style: const TextStyle(color: _kPrimaryColor, fontSize: 12, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton() {
+    return Container(
+      width: 30,
+      height: 30,
+      margin: const EdgeInsets.only(right: 8), // Adjust margin for alignment
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: const Center(
+        child: Text(
+          '—', // Hyphen to mimic the icon in the design
+          style: TextStyle(color: Colors.grey, fontSize: 18),
+        ),
+      ),
+    );
+  }
+}

@@ -10,6 +10,11 @@ class HotelController extends GetxController {
   var services = <Map<String, dynamic>>[].obs;
   var users = <Map<String, dynamic>>[].obs;
   var bookings = <Map<String, dynamic>>[].obs;
+
+  // NEW
+  var guestLogs = <Map<String, dynamic>>[].obs;
+  var bookingItems = <Map<String, dynamic>>[].obs;
+
   var loading = false.obs;
 
   @override
@@ -30,14 +35,14 @@ class HotelController extends GetxController {
       loadServices(),
       loadUsers(),
       loadBookings(),
+      loadGuestLogs(),
     ]);
     loading.value = false;
   }
 
-  // ----------------------------------------------------------------
+  // ================================================================
   // ROOMS
-  // ----------------------------------------------------------------
-
+  // ================================================================
   Future<void> loadRooms() async {
     rooms.assignAll(await repo.fetchRooms());
   }
@@ -58,10 +63,9 @@ class HotelController extends GetxController {
     await loadRooms();
   }
 
-  // ----------------------------------------------------------------
+  // ================================================================
   // SERVICES
-  // ----------------------------------------------------------------
-
+  // ================================================================
   Future<void> loadServices() async {
     services.assignAll(await repo.fetchServices());
   }
@@ -82,10 +86,9 @@ class HotelController extends GetxController {
     await loadServices();
   }
 
-  // ----------------------------------------------------------------
+  // ================================================================
   // USERS
-  // ----------------------------------------------------------------
-
+  // ================================================================
   Future<void> loadUsers() async {
     users.assignAll(await repo.fetchUsers());
   }
@@ -106,10 +109,9 @@ class HotelController extends GetxController {
     await loadUsers();
   }
 
-  // ----------------------------------------------------------------
-  // BOOKINGS
-  // ----------------------------------------------------------------
-
+  // ================================================================
+  // BOOKINGS (LEGACY)
+  // ================================================================
   Future<void> loadBookings() async {
     bookings.assignAll(await repo.fetchBookings());
   }
@@ -130,10 +132,90 @@ class HotelController extends GetxController {
     await loadBookings();
   }
 
-  // ----------------------------------------------------------------
-  // LOGIC HELPERS
-  // ----------------------------------------------------------------
+  // ================================================================
+  // GUEST LOG (HOMESTAY)
+  // ================================================================
+  Future<void> loadGuestLogs() async {
+    guestLogs.assignAll(await repo.fetchGuestLogs());
+  }
 
+  // ================================================================
+  // GUEST LOG (HOMESTAY) + BOOKING ITEMS
+  // ================================================================
+  Future<int> addGuestLog(
+    Map<String, dynamic> guest,
+    List<Map<String, dynamic>> items,
+  ) async {
+    final logId = await repo.insertGuestLog(guest, items);
+
+    for (final item in items) {
+      await repo.insertBookingItem({
+        ...item,
+        'logId': logId,
+        'checkInDate': item['checkInDate']?.toUtc().toIso8601String(),
+        'checkOutDate': item['checkOutDate']?.toUtc().toIso8601String(),
+      });
+    }
+
+    await loadGuestLogs();
+    await loadBookingItemsForGuests(); // ensure bookingItems is updated
+    return logId;
+  }
+
+  Future<void> updateGuestLog(
+    int logId,
+    Map<String, dynamic> guest,
+    List<Map<String, dynamic>> items,
+  ) async {
+    await repo.updateGuestLog(logId, guest, items);
+    await repo.deleteBookingItemsByLog(logId);
+
+    for (final item in items) {
+      await repo.insertBookingItem({
+        ...item,
+        'logId': logId,
+        'checkInDate': item['checkInDate']?.toUtc().toIso8601String(),
+        'checkOutDate': item['checkOutDate']?.toUtc().toIso8601String(),
+      });
+    }
+
+    await loadGuestLogs();
+    await loadBookingItemsForGuests();
+  }
+
+  /// Load all booking items and parse DateTime fields for display
+  Future<void> loadBookingItemsForGuests() async {
+    final items = await repo.fetchAllBookingItems();
+    bookingItems.assignAll(
+      items.map((b) {
+        return {
+          ...b,
+          'checkInDate':
+              b['checkInDate'] != null
+                  ? DateTime.parse(b['checkInDate']).toLocal()
+                  : null,
+          'checkOutDate':
+              b['checkOutDate'] != null
+                  ? DateTime.parse(b['checkOutDate']).toLocal()
+                  : null,
+        };
+      }).toList(),
+    );
+  }
+
+  /// Update a specific booking item by its ID
+  Future<void> updateBookingItem(int itemId, Map<String, dynamic> data) async {
+    await repo.updateBookingItem(itemId, {
+      ...data,
+      'checkInDate': data['checkInDate']?.toUtc().toIso8601String(),
+      'checkOutDate': data['checkOutDate']?.toUtc().toIso8601String(),
+    });
+    await loadBookingItemsForGuests();
+  }
+
+  // ================================================================
+  // HELPERS (UNCHANGED)
+  // ================================================================
   List<Map<String, dynamic>> availableRoomsForRange(
     DateTime inDate,
     DateTime outDate,
@@ -160,36 +242,25 @@ class HotelController extends GetxController {
   int activeRoomsCount() => rooms.where((r) => r['active'] == '1').length;
   int activeServicesCount() => services.where((s) => s['active'] == '1').length;
 
-  // ----------------------------------------------------------------
-  // SERVICE STRING HELPERS
-  // ----------------------------------------------------------------
-
   Map<int, int> parseServicesString(String? s) {
     final Map<int, int> result = {};
     if (s == null || s.isEmpty) return result;
 
-    final parts = s.split(';');
-    for (final pstr in parts) {
-      if (pstr.trim().isEmpty) continue;
-      final kv = pstr.split(':');
-
-      if (kv.length >= 1) {
-        final id = int.tryParse(kv[0]) ?? -1;
-        final cnt = kv.length >= 2 ? int.tryParse(kv[1]) ?? 1 : 1;
-        if (id > 0) result[id] = cnt;
-      }
+    for (final part in s.split(';')) {
+      final kv = part.split(':');
+      final id = int.tryParse(kv[0]) ?? -1;
+      final qty = kv.length > 1 ? int.tryParse(kv[1]) ?? 1 : 1;
+      if (id > 0) result[id] = qty;
     }
     return result;
   }
 
-  String servicesMapToString(Map<int, int> m) {
-    final parts = m.entries.map((e) => '${e.key}:${e.value}').toList();
-    return parts.join(';');
-  }
+  String servicesMapToString(Map<int, int> m) =>
+      m.entries.map((e) => '${e.key}:${e.value}').join(';');
 
   List<Map<String, dynamic>> bookingsForDate(DateTime date) {
     final start = DateTime(date.year, date.month, date.day);
-    final end = start.add(Duration(days: 1)).subtract(Duration(seconds: 1));
+    final end = start.add(const Duration(days: 1));
 
     return bookings.where((b) {
       final inDt = DateTime.parse(b['checkIn']!);

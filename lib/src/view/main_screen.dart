@@ -1,6 +1,7 @@
 import 'package:booking_desktop/src/controllers/hotel_controller.dart';
 import 'package:booking_desktop/src/view/booking/booking_tab.dart';
 import 'package:booking_desktop/src/view/dashboard/dashboard.dart';
+import 'package:booking_desktop/src/view/guest_management/guest_management.dart';
 import 'package:booking_desktop/src/view/room/room.dart';
 import 'package:booking_desktop/src/view/service/service.dart';
 import 'package:flutter/material.dart';
@@ -23,6 +24,7 @@ class _MainScreenState extends State<MainScreen> {
     BookingList(),
     RoomsTab(),
     ServicesTab(),
+    GuestManagementPage(),
     const Center(child: Text("Billing")),
     const Center(child: Text("Reports")),
   ];
@@ -126,13 +128,20 @@ class _MainScreenState extends State<MainScreen> {
                                 ),
                                 _menuTile(
                                   index: 4,
-                                  label: "Billing",
+                                  label: "Guest Management",
                                   icon: Icons.monetization_on_outlined,
                                   selectedIcon: Icons.monetization_on,
                                   color: primaryColor,
                                 ),
                                 _menuTile(
                                   index: 5,
+                                  label: "Billing",
+                                  icon: Icons.monetization_on_outlined,
+                                  selectedIcon: Icons.monetization_on,
+                                  color: primaryColor,
+                                ),
+                                _menuTile(
+                                  index: 6,
                                   label: "Reports",
                                   icon: Icons.bar_chart_outlined,
                                   selectedIcon: Icons.bar_chart,
@@ -198,6 +207,10 @@ class _MainScreenState extends State<MainScreen> {
                       NavigationDestination(
                         icon: Icon(Icons.king_bed),
                         label: "Rooms",
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.monetization_on),
+                        label: "Guest Management",
                       ),
                       NavigationDestination(
                         icon: Icon(Icons.monetization_on),
