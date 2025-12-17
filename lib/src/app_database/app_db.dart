@@ -23,7 +23,7 @@ class DatabaseRepo {
   // CREATE TABLES
   // ================================================================
   Future<void> _createTables() async {
-    // ROOMS (no check-in/out info here)
+    // ROOMS
     await _conn.query('''
       CREATE TABLE IF NOT EXISTS rooms (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -94,11 +94,13 @@ class DatabaseRepo {
         overallDiscountRs DOUBLE DEFAULT 0,
         extraChargesRs DOUBLE DEFAULT 0,
         chargeReason VARCHAR(200),
+        status VARCHAR(50) DEFAULT 'checked-in',   -- ADD STATUS HERE
         createdAt VARCHAR(100)
       )
     ''');
 
-    // BOOKING ITEMS (store room status per date)
+
+    // BOOKING ITEMS
     await _conn.query('''
       CREATE TABLE IF NOT EXISTS booking_items (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -109,12 +111,44 @@ class DatabaseRepo {
         checkInTime VARCHAR(50),
         checkOutDate VARCHAR(50),
         checkOutTime VARCHAR(50),
-        status VARCHAR(50) DEFAULT 'booked', -- booked, checked-in, checked-out, cancelled
+        status VARCHAR(50) DEFAULT 'booked',
         discount DOUBLE DEFAULT 0,
         FOREIGN KEY (logId) REFERENCES guestlog(id) ON DELETE CASCADE,
         FOREIGN KEY (roomId) REFERENCES rooms(id) ON DELETE SET NULL
       )
     ''');
+
+    // ================================================================
+    // NEW TABLE: GUEST SERVICE CONSUMPTION
+    // ================================================================
+    await _conn.query('''
+      CREATE TABLE IF NOT EXISTS guest_service_consumption (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        logId INT NOT NULL,
+        serviceId INT NOT NULL,
+        quantity INT DEFAULT 0,
+        pricePerUnit DOUBLE DEFAULT 0,
+        FOREIGN KEY (logId) REFERENCES guestlog(id) ON DELETE CASCADE,
+        FOREIGN KEY (serviceId) REFERENCES services(id) ON DELETE CASCADE
+      )
+    ''');
+
+    // ================================================================
+    // GUEST BILLS
+    // ================================================================
+    await _conn.query('''
+      CREATE TABLE IF NOT EXISTS guest_bills (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        logId INT NOT NULL,
+        discount DOUBLE DEFAULT 0,
+        additionalCharge DOUBLE DEFAULT 0,
+        reason VARCHAR(255),
+        createdAt VARCHAR(100) DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (logId) REFERENCES guestlog(id) ON DELETE CASCADE
+      )
+    ''');
+
+    
   }
 
   // ================================================================
@@ -141,7 +175,14 @@ class DatabaseRepo {
   Future<int> insertRoom(Map<String, dynamic> r) async {
     final res = await _conn.query(
       'INSERT INTO rooms (number, type, price, active, images, description) VALUES (?, ?, ?, ?, ?, ?)',
-      [r['number'], r['type'], r['price'], r['active'], r['images'], r['description']],
+      [
+        r['number'],
+        r['type'],
+        r['price'],
+        r['active'],
+        r['images'],
+        r['description'],
+      ],
     );
     return res.insertId ?? 0;
   }
@@ -149,7 +190,15 @@ class DatabaseRepo {
   Future<void> updateRoom(int id, Map<String, dynamic> r) async {
     await _conn.query(
       'UPDATE rooms SET number=?, type=?, price=?, active=?, images=?, description=? WHERE id=?',
-      [r['number'], r['type'], r['price'], r['active'], r['images'], r['description'], id],
+      [
+        r['number'],
+        r['type'],
+        r['price'],
+        r['active'],
+        r['images'],
+        r['description'],
+        id,
+      ],
     );
   }
 
@@ -168,7 +217,14 @@ class DatabaseRepo {
   Future<int> insertService(Map<String, dynamic> s) async {
     final res = await _conn.query(
       'INSERT INTO services (name, price, active, category, description, images) VALUES (?, ?, ?, ?, ?, ?)',
-      [s['name'], s['price'], s['active'], s['category'], s['description'], s['images']],
+      [
+        s['name'],
+        s['price'],
+        s['active'],
+        s['category'],
+        s['description'],
+        s['images'],
+      ],
     );
     return res.insertId ?? 0;
   }
@@ -176,7 +232,15 @@ class DatabaseRepo {
   Future<void> updateService(int id, Map<String, dynamic> s) async {
     await _conn.query(
       'UPDATE services SET name=?, price=?, active=?, category=?, description=?, images=? WHERE id=?',
-      [s['name'], s['price'], s['active'], s['category'], s['description'], s['images'], id],
+      [
+        s['name'],
+        s['price'],
+        s['active'],
+        s['category'],
+        s['description'],
+        s['images'],
+        id,
+      ],
     );
   }
 
@@ -219,7 +283,10 @@ class DatabaseRepo {
     return res.map(_rowToMap).toList();
   }
 
-  Future<int> insertGuestLog(Map<String, dynamic> g, List<Map<String, dynamic>> items) async {
+  Future<int> insertGuestLog(
+    Map<String, dynamic> g,
+    List<Map<String, dynamic>> items,
+  ) async {
     final res = await _conn.query(
       '''
       INSERT INTO guestlog (
@@ -231,16 +298,25 @@ class DatabaseRepo {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ''',
       [
-        g['name'], g['address'], g['citizenNumber'], g['occupation'],
-        g['numberOfGuests'], g['relationWithPartner'], g['reasonOfStay'],
-        g['contactNumber'], g['citizenImageBlob'], g['citizenImageDriveLink'],
-        g['overallDiscountRs'] ?? 0, g['extraChargesRs'] ?? 0, g['chargeReason'], g['createdAt'],
+        g['name'],
+        g['address'],
+        g['citizenNumber'],
+        g['occupation'],
+        g['numberOfGuests'],
+        g['relationWithPartner'],
+        g['reasonOfStay'],
+        g['contactNumber'],
+        g['citizenImageBlob'],
+        g['citizenImageDriveLink'],
+        g['overallDiscountRs'] ?? 0,
+        g['extraChargesRs'] ?? 0,
+        g['chargeReason'],
+        g['createdAt'],
       ],
     );
 
     final logId = res.insertId ?? 0;
 
-    // Create booking items for each room assigned
     for (final item in items) {
       await insertBookingItem({...item, 'logId': logId});
     }
@@ -248,7 +324,11 @@ class DatabaseRepo {
     return logId;
   }
 
-  Future<void> updateGuestLog(int id, Map<String, dynamic> g, List<Map<String, dynamic>> items) async {
+  Future<void> updateGuestLog(
+    int id,
+    Map<String, dynamic> g,
+    List<Map<String, dynamic>> items,
+  ) async {
     await _conn.query(
       '''
       UPDATE guestlog SET
@@ -259,10 +339,19 @@ class DatabaseRepo {
       WHERE id=?
       ''',
       [
-        g['name'], g['address'], g['citizenNumber'], g['occupation'],
-        g['numberOfGuests'], g['relationWithPartner'], g['reasonOfStay'],
-        g['contactNumber'], g['citizenImageBlob'], g['citizenImageDriveLink'],
-        g['overallDiscountRs'] ?? 0, g['extraChargesRs'] ?? 0, g['chargeReason'],
+        g['name'],
+        g['address'],
+        g['citizenNumber'],
+        g['occupation'],
+        g['numberOfGuests'],
+        g['relationWithPartner'],
+        g['reasonOfStay'],
+        g['contactNumber'],
+        g['citizenImageBlob'],
+        g['citizenImageDriveLink'],
+        g['overallDiscountRs'] ?? 0,
+        g['extraChargesRs'] ?? 0,
+        g['chargeReason'],
         id,
       ],
     );
@@ -326,19 +415,18 @@ class DatabaseRepo {
     return res.insertId ?? 0;
   }
 
-
-
   Future<void> deleteBookingItemsByLog(int logId) async {
     await _conn.query('DELETE FROM booking_items WHERE logId=?', [logId]);
   }
 
   Future<List<Map<String, dynamic>>> fetchBookingItemsByLog(int logId) async {
     final res = await _conn.query(
-      'SELECT * FROM booking_items WHERE logId=? ORDER BY id ASC',
+      'SELECT * FROM booking_items WHERE logId = ? ORDER BY id ASC',
       [logId],
     );
     return res.map(_rowToMap).toList();
   }
+
 
   Future<List<Map<String, dynamic>>> fetchAllBookingItems() async {
     final res = await _conn.query(
@@ -347,24 +435,22 @@ class DatabaseRepo {
     return res.map(_rowToMap).toList();
   }
 
-  // Update booking item
   Future<int> updateBookingItem(int id, Map<String, dynamic> i) async {
     final arrivalDateUtc =
-        (i['arrivalDate'] as DateTime?)?.toUtc().toIso8601String();
+        i['checkInDate'];
     final checkOutDateUtc =
-        (i['checkOutDate'] as DateTime?)?.toUtc().toIso8601String();
+        i['checkOutDate'];
 
     final res = await _conn.query(
       '''
     UPDATE booking_items
-    SET roomId=?, roomNumber=?,
+    SET roomNumber=?,
         arrivalDate=?, checkInTime=?,
         checkOutDate=?, checkOutTime=?,
         discount=?, status=?
     WHERE id=?
     ''',
       [
-        i['roomId'],
         i['roomNumber'],
         arrivalDateUtc,
         i['checkInTime'],
@@ -377,6 +463,7 @@ class DatabaseRepo {
     );
     return res.affectedRows ?? 0;
   }
+
 
   // ================================================================
   // BOOKINGS CRUD
@@ -423,5 +510,106 @@ class DatabaseRepo {
   Future<void> deleteBooking(int id) async {
     await _conn.query('DELETE FROM bookings WHERE id=?', [id]);
   }
-}
 
+  // ================================================================
+  // NEW: GUEST SERVICE CONSUMPTION CRUD
+  // ================================================================
+  Future<List<Map<String, dynamic>>> fetchServiceConsumptionSummary(
+    int logId,
+  ) async {
+    final res = await _conn.query(
+      'SELECT serviceId, SUM(quantity) as totalQuantity FROM guest_service_consumption WHERE logId=? GROUP BY serviceId',
+      [logId],
+    );
+    return res.map(_rowToMap).toList();
+  }
+
+  Future<void> deleteGuestServiceConsumptionByLog(int logId) async {
+    await _conn.query('DELETE FROM guest_service_consumption WHERE logId=?', [
+      logId,
+    ]);
+  }
+
+  Future<void> bulkInsertGuestServiceConsumption(
+    List<Map<String, dynamic>> items,
+  ) async {
+    for (final i in items) {
+      final logExists = await _conn.query(
+        'SELECT id FROM guestlog WHERE id=?',
+        [i['logId']],
+      );
+      if (logExists.isEmpty) {
+        throw Exception('Guest log ID ${i['logId']} does not exist.');
+      }
+
+      await _conn.query(
+        'INSERT INTO guest_service_consumption (logId, serviceId, quantity, pricePerUnit) VALUES (?, ?, ?, ?)',
+        [i['logId'], i['serviceId'], i['quantity'], i['pricePerUnit']],
+      );
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchGuestLogById(int logId) async {
+    final res = await _conn.query('SELECT * FROM guestlog WHERE id=?', [logId]);
+    return res.map(_rowToMap).toList();
+  }
+
+  // Update guest log to Checked Out
+  Future<void> updateGuestLogStatus(
+    int logId, {
+    required String status,
+    required String checkOutDate, // should be a valid ISO string
+  }) async {
+    // 1. Update the guest log status
+    await _conn.query('UPDATE guestlog SET status = ? WHERE id = ?', [
+      status,
+      logId,
+    ]);
+
+    // 2. Update all associated booking items
+    await _conn.query(
+      'UPDATE booking_items SET status = ?, checkOutDate = ? WHERE logId = ?',
+      [status, checkOutDate.isNotEmpty ? checkOutDate : null, logId],
+    );
+  }
+
+
+  // Optional: Save bill info
+  Future<void> saveGuestBill(
+    int logId, {
+    double discount = 0,
+    double additionalCharge = 0,
+    String reason = '',
+  }) async {
+    // implement logic to save to a 'guest_bills' table if you have one
+    // Example:
+    await _conn.query(
+      'INSERT INTO guest_bills (logId, discount, additionalCharge, reason) VALUES (?, ?, ?, ?)',
+      [logId, discount, additionalCharge, reason],
+    );
+  }
+
+  // ================================================================
+  // DELETE GUEST LOG AND ALL ASSOCIATED DATA
+  // ================================================================
+  /// DELETE GUEST LOG AND ALL ASSOCIATED DATA
+  Future<void> deleteGuestLogWithAssociations(int logId) async {
+    // 1. Delete guest service consumption
+    await _conn.query('DELETE FROM guest_service_consumption WHERE logId = ?', [
+      logId,
+    ]);
+
+    // 2. Delete booking items
+    await _conn.query('DELETE FROM booking_items WHERE logId = ?', [logId]);
+
+    // 3. Delete guest bills
+    await _conn.query('DELETE FROM guest_bills WHERE logId = ?', [logId]);
+
+    // 4. Delete the guest log itself
+    await _conn.query('DELETE FROM guestlog WHERE id = ?', [logId]);
+  }
+
+
+
+
+}

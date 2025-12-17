@@ -1,4 +1,8 @@
 import 'dart:io';
+import 'package:booking_desktop/src/view/guest_management/check_out_management.dart';
+import 'package:booking_desktop/src/view/guest_management/edit_guest.dart';
+import 'package:booking_desktop/src/view/guest_management/guest_card.dart';
+import 'package:booking_desktop/src/view/guest_management/service_logging_dialoge.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:get/get.dart';
@@ -686,71 +690,22 @@ class CurrentGuestsCard extends StatefulWidget {
 }
 
 class _CurrentGuestsCardState extends State<CurrentGuestsCard> {
-  final _controller = HotelController.to;
-
-  final ScrollController _verticalScroll = ScrollController();
-  final ScrollController _horizontalScroll = ScrollController();
-
-  String _searchQuery = '';
+  final controller = HotelController.to;
+  String search = '';
 
   @override
   void initState() {
     super.initState();
-    _controller.loadBookingItemsForGuests();
+    controller.loadBookingItemsForGuests();
   }
-
-  @override
-  void dispose() {
-    _verticalScroll.dispose();
-    _horizontalScroll.dispose();
-    super.dispose();
-  }
-
-  // final List<String> statusFilters = [
-  //   'All',
-  //   'Current',
-  //   'Past',
-  // ];
-
-  // Widget _buildFilterButton(BuildContext context, String filter) {
-  //   final isSelected = _selectedFilter == filter;
-
-  //   return Padding(
-  //     padding: const EdgeInsets.only(right: 8.0),
-  //     child: OutlinedButton(
-  //       onPressed: () {
-  //         setState(() {
-  //           _selectedFilter = filter;
-  //         });
-  //       },
-  //       style: OutlinedButton.styleFrom(
-  //         foregroundColor: isSelected ? Colors.white : Colors.black87,
-  //         backgroundColor: isSelected ? const Color(0xFF4CAF50) : Colors.white,
-  //         side: BorderSide(
-  //           color: isSelected ? const Color(0xFF4CAF50) : Colors.grey.shade300,
-  //           width: 1.2,
-  //         ),
-  //         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-  //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-  //       ),
-  //       child: Text(
-  //         filter,
-  //         style: TextStyle(
-  //           color: isSelected ? Colors.white : Colors.black87,
-  //           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
 
   @override
   Widget build(BuildContext context) {
     return Card(
       color: _kCardColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      margin: const EdgeInsets.all(16),
       child: Padding(
-        padding: const EdgeInsets.all(30.0),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -758,146 +713,51 @@ class _CurrentGuestsCardState extends State<CurrentGuestsCard> {
               'Current Guests',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                _buildSearchBar(),
-              ],
-            ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 16),
+            _searchBar(),
+            const SizedBox(height: 16),
+
             Obx(() {
-              if (_controller.guestLogs.isEmpty) {
-                return const Center(child: Text('No current guests'));
-              }
-            
-              // Filter guests based on search query
-              final filteredGuests =
-                  _controller.guestLogs.where((g) {
-                    final guestName =
-                        (g['name'] ?? '').toString().toLowerCase();
-                    final guestPhone =
-                        (g['contactNumber'] ?? '').toString().toLowerCase();
-            
-                    // Collect guest rooms
-                    final guestRoomNumbers = _controller.bookingItems
-                        .where(
-                          (b) => b['logId'].toString() == g['id'].toString(),
-                        )
-                        .map((b) {
-                          final room = _controller.rooms.firstWhere(
-                            (r) =>
-                                r['id'].toString() == b['roomId'].toString(),
-                            orElse: () => {'number': 'Unknown'},
-                          );
-                          return room['number'].toString().toLowerCase();
-                        })
-                        .join(' ');
-            
-                    final query = _searchQuery.toLowerCase();
-                    return guestName.contains(query) ||
-                        guestPhone.contains(query) ||
-                        guestRoomNumbers.contains(query);
+              final items = _optimizedGuestItems();
+
+              final filtered =
+                  items.where((e) {
+                    final q = search.toLowerCase();
+                    return e['name'].toString().toLowerCase().contains(q) ||
+                        e['roomNumber'].toString().toLowerCase().contains(q) ||
+                        e['contactNumber'].toString().toLowerCase().contains(q);
                   }).toList();
-            
-              if (filteredGuests.isEmpty) {
-                return const Center(child: Text('No matching guests'));
+
+              if (filtered.isEmpty) {
+                return const Center(child: Text('No guests found'));
               }
-            
-              final rows = <DataRow>[];
-            
-              for (final g in filteredGuests) {
-                final Map<String, Map<String, dynamic>> roomBookings = {};
-            
-                for (final b in _controller.bookingItems) {
-                  if (b['logId'].toString() != g['id'].toString()) continue;
-                  final roomId = b['roomId'].toString();
-                  roomBookings.putIfAbsent(roomId, () => b);
-                }
-            
-                for (final b in roomBookings.values) {
-                  final room = _controller.rooms.firstWhere(
-                    (r) => r['id'].toString() == b['roomId'].toString(),
-                    orElse: () => {'number': 'Unknown'},
+
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: filtered.length,
+                itemBuilder: (_, i) {
+                  final item = filtered[i];
+                  return GuestLogCard(
+                    item: item,
+                    onTap: () async {
+                      var didUpdate = await showDialog(context: context, builder: (context) {
+                        return EditGuestDialog(
+                            logId: int.tryParse(item['logId']) ?? -1,
+                          );
+                      },);
+
+                      if (didUpdate == true) {
+                        await controller.refreshGuestData();
+                      }
+                    },
+                    onFoodTap: () {
+                      _showFoodLoggingDialog(int.tryParse(item['logId']) ?? -1);
+                    },
+                    popupMenu: _buildPopupMenu(int.tryParse(item['logId']) ?? -1, item),
                   );
-            
-                  final checkIn =
-                      b['arrivalDate'] != null
-                          ? "${_formatDate(b['arrivalDate'])} ${b['checkInTime'] ?? ''}"
-                          : '';
-            
-                  final checkOut =
-                      b['checkOutDate'] != null
-                          ? "${_formatDate(b['checkOutDate'])} ${b['checkOutTime'] ?? ''}"
-                          : '';
-            
-                  rows.add(
-                    DataRow(
-                      cells: [
-                        // Action buttons
-                        DataCell(
-                          Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.edit,
-                                  color: Colors.blue,
-                                ),
-                                tooltip: 'Edit Guest',
-                                onPressed: () {
-                                  // _controller.updateGuestLog(g);
-                                },
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete,
-                                  color: Colors.red,
-                                ),
-                                tooltip: 'Delete Guest',
-                                onPressed: () {
-                                  // _controller.dele(g['id']);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        DataCell(Text(g['name'] ?? '')),
-                        DataCell(Text(room['number'] ?? 'Unknown')),
-                        DataCell(Text(checkIn)),
-                        DataCell(Text(checkOut)),
-                        const DataCell(Text('Active')),
-                      ],
-                    ),
-                  );
-                }
-              }
-            
-              return Scrollbar(
-                controller: _verticalScroll,
-                thumbVisibility: true,
-                trackVisibility: true,
-                child: SingleChildScrollView(
-                  controller: _verticalScroll,
-                  scrollDirection: Axis.vertical,
-                  child: Scrollbar(
-                    controller: _horizontalScroll,
-                    thumbVisibility: true,
-                    child: SingleChildScrollView(
-                      controller: _horizontalScroll,
-                      scrollDirection: Axis.horizontal,
-                      child: DataTable(
-                        columns: const [
-                          DataColumn(label: Text('Actions')),
-                          DataColumn(label: Text('Name')),
-                          DataColumn(label: Text('Room')),
-                          DataColumn(label: Text('Check-in')),
-                          DataColumn(label: Text('Check-out')),
-                          DataColumn(label: Text('Status')),
-                        ],
-                        rows: rows,
-                      ),
-                    ),
-                  ),
-                ),
+
+                },
               );
             }),
           ],
@@ -906,31 +766,256 @@ class _CurrentGuestsCardState extends State<CurrentGuestsCard> {
     );
   }
 
-  Widget _buildSearchBar() {
-    return Expanded(
-      child: TextField(
-        onChanged: (v) => setState(() => _searchQuery = v),
-        decoration: InputDecoration(
-          hintText: 'Search by name, phone, or room...',
-          prefixIcon: const Icon(Icons.search),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 10,
-            horizontal: 12,
-          ),
-        ),
+  Widget _buildPopupMenu(int id, Map<String, dynamic> log) {
+    final controller = HotelController.to;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: PopupMenuButton<String>(
+        color: Colors.white,
+        icon: const Icon(Icons.more_vert, color: Colors.black54),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        tooltip: 'Actions',
+        onSelected: (value) async {
+          switch (value) {
+            case 'calculate_bill':
+              final bool? didUpdate = await showDialog(context: context, builder: (context) {
+                return CalculateBillDialog(
+                        logId: id,
+                      );
+              },);
+
+              if (didUpdate == true) {
+                await controller.refreshGuestData();
+              }
+              break;
+
+            case 'checkout':
+              // final bool? checkedOut = await _showCheckOutDialog(id);
+              // if (checkedOut == true) {
+              //   await controller.refreshGuestData();
+              // }
+              break;
+
+            case 'delete':
+              // final bool confirm = await _confirmDelete();
+              // if (!confirm) return;
+
+              await controller.deleteGuestLog(id);
+              await controller.refreshGuestData();
+              break;
+          }
+        },
+        itemBuilder:
+            (_) => [
+              const PopupMenuItem(
+                value: 'calculate_bill',
+                child: Row(
+                  children: [
+                    Icon(Icons.receipt_long, color: Colors.green, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Calculate Bill',
+                      style: TextStyle(color: Colors.green, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+
+              if (_getGuestStatus(log) != 'Checked-out')
+                const PopupMenuItem(
+                  value: 'checkout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, color: Colors.blue, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Update Check Out',
+                        style: TextStyle(color: Colors.blue, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
+
+              const PopupMenuDivider(),
+
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Delete',
+                      style: TextStyle(color: Colors.red, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            ],
       ),
     );
   }
 
-  String _formatDate(dynamic v) {
-    if (v == null) return '';
-    if (v is DateTime) return '${v.day}-${v.month}-${v.year}';
-    if (v is String) {
-      final d = DateTime.tryParse(v);
-      if (d != null) return '${d.day}-${d.month}-${d.year}';
+  /// Returns the status of a guest based on their log data
+  static String _getGuestStatus(Map<String, dynamic> item) {
+    final now = DateTime.now();
+    final arrival = parseDate(item['arrivalDate']);
+    final checkout = parseDate(item['checkOutDate']);
+
+    if (arrival != null && arrival.isAfter(now)) return 'Upcoming';
+    if (checkout != null && checkout.isBefore(now)) return 'Checked-out';
+    return 'Checked-in';
+  }
+
+  static DateTime? parseDate(dynamic v) {
+    if (v == null) return null;
+    if (v is DateTime) return v;
+    if (v is String) return DateTime.tryParse(v);
+    return null;
+  }
+
+
+
+  void _showFoodLoggingDialog(int logId) {
+    showDialog(
+      context: context,
+      builder:
+        (_) => ServiceLoggingDialog(
+          logId: logId,
+        ),
+    );
+  }
+
+
+
+  Widget _searchBar() {
+    return TextField(
+      onChanged: (v) => setState(() => search = v),
+      decoration: InputDecoration(
+        hintText: 'Search by name, phone, room',
+        prefixIcon: const Icon(Icons.search),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
+  /// 🔥 O(n) OPTIMIZED FLATTENING
+  List<Map<String, dynamic>> _optimizedGuestItems() {
+    final roomMap = {
+      for (var r in controller.rooms) r['id'].toString(): r['number'],
+    };
+
+    final guestMap = {
+      for (var g in controller.guestLogs) g['id'].toString(): g,
+    };
+
+    final List<Map<String, dynamic>> result = [];
+
+    for (final b in controller.bookingItems) {
+      final guest = guestMap[b['logId'].toString()];
+      if (guest == null) continue;
+
+      result.add({
+        ...guest,
+        ...b,
+        'roomNumber': roomMap[b['roomId'].toString()] ?? 'Unknown',
+      });
     }
-    return '';
+
+    return result;
+  }
+}
+
+
+class AddServiceDialog extends StatefulWidget {
+  final int logId;
+
+  const AddServiceDialog({super.key, required this.logId});
+
+  @override
+  State<AddServiceDialog> createState() => _AddServiceDialogState();
+}
+
+class _AddServiceDialogState extends State<AddServiceDialog> {
+  final controller = HotelController.to;
+
+  Map<int, int> selected = {}; // serviceId -> qty
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add Services'),
+      content: SizedBox(
+        width: 420,
+        child: Obx(() {
+          return ListView.separated(
+            shrinkWrap: true,
+            itemCount: controller.services.length,
+            separatorBuilder: (_, __) => const Divider(),
+            itemBuilder: (_, i) {
+              final s = controller.services[i];
+              final id = s['id'];
+              final qty = selected[id] ?? 0;
+
+              return Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          s['name'],
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        Text('Rs ${s['price']}'),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.remove),
+                    onPressed:
+                        qty > 0
+                            ? () => setState(() => selected[id] = qty - 1)
+                            : null,
+                  ),
+                  Text(qty.toString()),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () {
+                      setState(() => selected[id] = qty + 1);
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+        }),
+      ),
+      actions: [
+        TextButton(
+          onPressed: Navigator.of(context).pop,
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(onPressed: _save, child: const Text('Add')),
+      ],
+    );
+  }
+
+  Future<void> _save() async {
+    final entries = selected.entries.where((e) => e.value > 0).toList();
+    if (entries.isEmpty) return;
+
+    // for (final e in entries) {
+    //   await controller.repo.insertGuestServiceUsage({
+    //     'logId': widget.logId,
+    //     'serviceId': e.key,
+    //     'qty': e.value,
+    //   });
+    // }
+
+    await controller.refreshGuestData();
+    Navigator.pop(context);
   }
 }
 

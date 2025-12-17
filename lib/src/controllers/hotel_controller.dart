@@ -6,17 +6,19 @@ class HotelController extends GetxController {
 
   final repo = DatabaseRepo();
 
+  // =================== STATE ===================
   var rooms = <Map<String, dynamic>>[].obs;
   var services = <Map<String, dynamic>>[].obs;
   var users = <Map<String, dynamic>>[].obs;
   var bookings = <Map<String, dynamic>>[].obs;
 
-  // NEW
+  // Guest log (Homestay)
   var guestLogs = <Map<String, dynamic>>[].obs;
   var bookingItems = <Map<String, dynamic>>[].obs;
 
   var loading = false.obs;
 
+  // =================== LIFECYCLE ===================
   @override
   void onInit() {
     super.onInit();
@@ -24,7 +26,7 @@ class HotelController extends GetxController {
   }
 
   Future<void> _init() async {
-    await repo.init();
+    await repo.init(); // initialize connection
     await loadAll();
   }
 
@@ -36,6 +38,7 @@ class HotelController extends GetxController {
       loadUsers(),
       loadBookings(),
       loadGuestLogs(),
+      loadBookingItemsForGuests(),
     ]);
     loading.value = false;
   }
@@ -140,50 +143,41 @@ class HotelController extends GetxController {
   }
 
   // ================================================================
-  // GUEST LOG (HOMESTAY) + BOOKING ITEMS
+  // GUEST LOG + BOOKING ITEMS
   // ================================================================
   Future<int> addGuestLog(
     Map<String, dynamic> guest,
     List<Map<String, dynamic>> items,
   ) async {
-    final logId = await repo.insertGuestLog(guest, items);
-
-    for (final item in items) {
-      await repo.insertBookingItem({
-        ...item,
-        'logId': logId,
-        'checkInDate': item['checkInDate']?.toUtc().toIso8601String(),
-        'checkOutDate': item['checkOutDate']?.toUtc().toIso8601String(),
-      });
-    }
-
-    await loadGuestLogs();
-    await loadBookingItemsForGuests(); // ensure bookingItems is updated
+    final logId = await repo.insertGuestLog(
+      guest,
+      items,
+    ); // already inserts items
+    await refreshGuestData();
     return logId;
   }
+
 
   Future<void> updateGuestLog(
     int logId,
     Map<String, dynamic> guest,
     List<Map<String, dynamic>> items,
   ) async {
+    // Update guest info
     await repo.updateGuestLog(logId, guest, items);
-    await repo.deleteBookingItemsByLog(logId);
 
+    // Update or insert booking items
     for (final item in items) {
-      await repo.insertBookingItem({
-        ...item,
-        'logId': logId,
-        'checkInDate': item['checkInDate']?.toUtc().toIso8601String(),
-        'checkOutDate': item['checkOutDate']?.toUtc().toIso8601String(),
-      });
+      if (item.containsKey('roomId') && item['roomId'] != null) {
+        // Update existing booking item
+        await repo.updateBookingItem(logId, item);
+      }
     }
 
-    await loadGuestLogs();
-    await loadBookingItemsForGuests();
+    await refreshGuestData();
   }
 
-  /// Load all booking items and parse DateTime fields for display
+  /// Load all booking items and parse DateTime fields
   Future<void> loadBookingItemsForGuests() async {
     final items = await repo.fetchAllBookingItems();
     bookingItems.assignAll(
@@ -203,13 +197,25 @@ class HotelController extends GetxController {
     );
   }
 
-  /// Update a specific booking item by its ID
+  /// Update a specific booking item
   Future<void> updateBookingItem(int itemId, Map<String, dynamic> data) async {
     await repo.updateBookingItem(itemId, {
       ...data,
       'checkInDate': data['checkInDate']?.toUtc().toIso8601String(),
       'checkOutDate': data['checkOutDate']?.toUtc().toIso8601String(),
     });
+    await loadBookingItemsForGuests();
+  }
+
+  deleteGuestLog(int id) async{
+    await repo.deleteGuestLogWithAssociations(id);
+  }
+
+  // ================================================================
+  // 🔥 SAFE ADDITION (USED BY LOG DETAIL PAGE)
+  // ================================================================
+  Future<void> refreshGuestData() async {
+    await loadGuestLogs();
     await loadBookingItemsForGuests();
   }
 
