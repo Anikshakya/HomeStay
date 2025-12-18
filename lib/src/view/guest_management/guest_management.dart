@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:io';
 import 'package:booking_desktop/src/view/guest_management/check_out_management.dart';
 import 'package:booking_desktop/src/view/guest_management/edit_guest.dart';
@@ -230,7 +232,7 @@ class _NewGuestCheckInCardState extends State<NewGuestCheckInCard> {
       if (!available.selectable) {
         Get.snackbar(
           'Error',
-          'Room ${roomId} is not available: ${available.reason ?? 'Booked'}',
+          'Room $roomId is not available: ${available.reason ?? 'Booked'}',
         );
         return;
       }
@@ -350,7 +352,7 @@ class _NewGuestCheckInCardState extends State<NewGuestCheckInCard> {
                         color: Colors.white,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
+                            color: Colors.black.withValues(alpha:0.08),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -637,10 +639,12 @@ class _NewGuestCheckInCardState extends State<NewGuestCheckInCard> {
     required DateTime? checkInDate,
     required DateTime? checkOutDate,
   }) {
-    if (room['active'].toString() != 1.toString()) {
+    // Room inactive
+    if (room['active'].toString() != '1') {
       return RoomAvailability(selectable: false, reason: 'Inactive');
     }
 
+    // No dates selected yet → allow selection
     if (checkInDate == null || checkOutDate == null) {
       return RoomAvailability(selectable: true);
     }
@@ -648,25 +652,55 @@ class _NewGuestCheckInCardState extends State<NewGuestCheckInCard> {
     for (final b in _controller.bookingItems) {
       if (b['roomId'].toString() != room['id'].toString()) continue;
 
+      final status = getBookingStatus(b);
+
+      // ✅ Checked-out bookings NEVER block rooms
+      if (status == GuestStatus.checkedOut) continue;
+
       final existingCheckIn = parseDate(b['arrivalDate']);
       final existingCheckOut = parseDate(b['checkOutDate']);
 
       if (existingCheckIn == null || existingCheckOut == null) continue;
 
       final overlap =
-          existingCheckIn.isBefore(checkOutDate) && existingCheckOut.isAfter(checkInDate);
+          existingCheckIn.isBefore(checkOutDate) &&
+          existingCheckOut.isAfter(checkInDate);
 
       if (overlap) {
         return RoomAvailability(
           selectable: false,
-          reason: 'Booked',
-          bookingStatus: b['status'],
+          reason: status == GuestStatus.booked ? 'Booked' : 'Occupied',
+          bookingStatus: status.name,
         );
       }
     }
 
     return RoomAvailability(selectable: true);
   }
+
+ 
+
+GuestStatus getBookingStatus(Map<String, dynamic> booking) {
+  final now = DateTime.now();
+  final arrival = parseDate(booking['arrivalDate']);
+  final checkout = parseDate(booking['checkOutDate']);
+
+  if (arrival == null || checkout == null) {
+    return GuestStatus.checkedIn;
+  }
+
+  if (now.isBefore(arrival)) {
+    return GuestStatus.booked;
+  }
+
+  if (now.isAfter(checkout)) {
+    return GuestStatus.checkedOut;
+  }
+
+  return GuestStatus.checkedIn;
+}
+
+
 }
 
 class RoomAvailability {
@@ -681,6 +715,9 @@ class RoomAvailability {
 // =========================
 // Right Panel: Current Guests
 // =========================
+enum GuestFilter { active, past }
+
+enum GuestStatus { booked, checkedIn, checkedOut }
 
 class CurrentGuestsCard extends StatefulWidget {
   const CurrentGuestsCard({super.key});
@@ -691,7 +728,9 @@ class CurrentGuestsCard extends StatefulWidget {
 
 class _CurrentGuestsCardState extends State<CurrentGuestsCard> {
   final controller = HotelController.to;
+
   String search = '';
+  GuestFilter _filter = GuestFilter.active;
 
   @override
   void initState() {
@@ -702,7 +741,6 @@ class _CurrentGuestsCardState extends State<CurrentGuestsCard> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: _kCardColor,
       margin: const EdgeInsets.all(16),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -714,19 +752,33 @@ class _CurrentGuestsCardState extends State<CurrentGuestsCard> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 16),
-            _searchBar(),
+
+            _searchAndFilterBar(),
+
             const SizedBox(height: 16),
 
             Obx(() {
               final items = _optimizedGuestItems();
 
-              final filtered =
-                  items.where((e) {
-                    final q = search.toLowerCase();
-                    return e['name'].toString().toLowerCase().contains(q) ||
-                        e['roomNumber'].toString().toLowerCase().contains(q) ||
-                        e['contactNumber'].toString().toLowerCase().contains(q);
-                  }).toList();
+              final filtered = items.where((e) {
+                final q = search.toLowerCase();
+
+                final matchesSearch =
+                    e['name'].toString().toLowerCase().contains(q) ||
+                    e['roomNumber'].toString().toLowerCase().contains(q) ||
+                    e['contactNumber'].toString().toLowerCase().contains(q);
+
+                if (!matchesSearch) return false;
+
+                final status = getGuestStatus(e);
+
+                if (_filter == GuestFilter.active) {
+                  return status == GuestStatus.booked ||
+                      status == GuestStatus.checkedIn;
+                } else {
+                  return status == GuestStatus.checkedOut;
+                }
+              }).toList();
 
               if (filtered.isEmpty) {
                 return const Center(child: Text('No guests found'));
@@ -738,25 +790,34 @@ class _CurrentGuestsCardState extends State<CurrentGuestsCard> {
                 itemCount: filtered.length,
                 itemBuilder: (_, i) {
                   final item = filtered[i];
+                  final status = getGuestStatus(item);
+
                   return GuestLogCard(
                     item: item,
+                    statusLabel: getStatusLabel(status),
+                    statusColor: getStatusColor(status),
                     onTap: () async {
-                      var didUpdate = await showDialog(context: context, builder: (context) {
-                        return EditGuestDialog(
-                            logId: int.tryParse(item['logId']) ?? -1,
-                          );
-                      },);
+                      final didUpdate = await showDialog(
+                        context: context,
+                        builder: (_) => EditGuestDialog(
+                          logId: int.tryParse(item['logId']) ?? -1,
+                        ),
+                      );
 
                       if (didUpdate == true) {
                         await controller.refreshGuestData();
                       }
                     },
                     onFoodTap: () {
-                      _showFoodLoggingDialog(int.tryParse(item['logId']) ?? -1);
+                      _showFoodLoggingDialog(
+                        int.tryParse(item['logId']) ?? -1,
+                      );
                     },
-                    popupMenu: _buildPopupMenu(int.tryParse(item['logId']) ?? -1, item),
+                    popupMenu: _buildPopupMenu(
+                      int.tryParse(item['logId']) ?? -1,
+                      item,
+                    ),
                   );
-
                 },
               );
             }),
@@ -766,141 +827,67 @@ class _CurrentGuestsCardState extends State<CurrentGuestsCard> {
     );
   }
 
-  Widget _buildPopupMenu(int id, Map<String, dynamic> log) {
-    final controller = HotelController.to;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: PopupMenuButton<String>(
-        color: Colors.white,
-        icon: const Icon(Icons.more_vert, color: Colors.black54),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        tooltip: 'Actions',
-        onSelected: (value) async {
-          switch (value) {
-            case 'calculate_bill':
-              final bool? didUpdate = await showDialog(context: context, builder: (context) {
-                return CalculateBillDialog(
-                        logId: id,
-                      );
-              },);
-
-              if (didUpdate == true) {
-                await controller.refreshGuestData();
-              }
-              break;
-
-            case 'checkout':
-              // final bool? checkedOut = await _showCheckOutDialog(id);
-              // if (checkedOut == true) {
-              //   await controller.refreshGuestData();
-              // }
-              break;
-
-            case 'delete':
-              // final bool confirm = await _confirmDelete();
-              // if (!confirm) return;
-
-              await controller.deleteGuestLog(id);
-              await controller.refreshGuestData();
-              break;
-          }
-        },
-        itemBuilder:
-            (_) => [
-              const PopupMenuItem(
-                value: 'calculate_bill',
-                child: Row(
-                  children: [
-                    Icon(Icons.receipt_long, color: Colors.green, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'Calculate Bill',
-                      style: TextStyle(color: Colors.green, fontSize: 14),
-                    ),
-                  ],
-                ),
+  // 🔍 Search + Filter Bar
+  Widget _searchAndFilterBar() {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            onChanged: (v) => setState(() => search = v),
+            decoration: InputDecoration(
+              hintText: 'Search by name, phone, room',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-
-              if (_getGuestStatus(log) != 'Checked-out')
-                const PopupMenuItem(
-                  value: 'checkout',
-                  child: Row(
-                    children: [
-                      Icon(Icons.logout, color: Colors.blue, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'Update Check Out',
-                        style: TextStyle(color: Colors.blue, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                ),
-
-              const PopupMenuDivider(),
-
-              const PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'Delete',
-                      style: TextStyle(color: Colors.red, fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-      ),
-    );
-  }
-
-  /// Returns the status of a guest based on their log data
-  static String _getGuestStatus(Map<String, dynamic> item) {
-    final now = DateTime.now();
-    final arrival = parseDate(item['arrivalDate']);
-    final checkout = parseDate(item['checkOutDate']);
-
-    if (arrival != null && arrival.isAfter(now)) return 'Upcoming';
-    if (checkout != null && checkout.isBefore(now)) return 'Checked-out';
-    return 'Checked-in';
-  }
-
-  static DateTime? parseDate(dynamic v) {
-    if (v == null) return null;
-    if (v is DateTime) return v;
-    if (v is String) return DateTime.tryParse(v);
-    return null;
-  }
-
-
-
-  void _showFoodLoggingDialog(int logId) {
-    showDialog(
-      context: context,
-      builder:
-        (_) => ServiceLoggingDialog(
-          logId: logId,
+            ),
+          ),
         ),
+        const SizedBox(width: 12),
+
+        _filterButton(
+          label: 'Active',
+          selected: _filter == GuestFilter.active,
+          onTap: () => setState(() => _filter = GuestFilter.active),
+        ),
+
+        const SizedBox(width: 8),
+
+        _filterButton(
+          label: 'Past',
+          selected: _filter == GuestFilter.past,
+          onTap: () => setState(() => _filter = GuestFilter.past),
+        ),
+      ],
     );
   }
 
-
-
-  Widget _searchBar() {
-    return TextField(
-      onChanged: (v) => setState(() => search = v),
-      decoration: InputDecoration(
-        hintText: 'Search by name, phone, room',
-        prefixIcon: const Icon(Icons.search),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+  Widget _filterButton({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? Colors.blue : Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
     );
   }
 
-  /// 🔥 O(n) OPTIMIZED FLATTENING
+  // ⚡ Optimized flattening (O(n))
   List<Map<String, dynamic>> _optimizedGuestItems() {
     final roomMap = {
       for (var r in controller.rooms) r['id'].toString(): r['number'],
@@ -925,7 +912,111 @@ class _CurrentGuestsCardState extends State<CurrentGuestsCard> {
 
     return result;
   }
+
+  // ✅ Correct guest status logic
+  static GuestStatus getGuestStatus(Map<String, dynamic> item) {
+    final now = DateTime.now();
+    final arrival = parseDate(item['arrivalDate']);
+    final checkout = parseDate(item['checkOutDate']);
+
+    if (arrival == null || checkout == null) {
+      return GuestStatus.checkedIn;
+    }
+
+    if (now.isBefore(arrival)) {
+      return GuestStatus.booked;
+    }
+
+    if (now.isAfter(checkout)) {
+      return GuestStatus.checkedOut;
+    }
+
+    return GuestStatus.checkedIn;
+  }
+
+  static String getStatusLabel(GuestStatus status) {
+    switch (status) {
+      case GuestStatus.booked:
+        return 'Booked';
+      case GuestStatus.checkedIn:
+        return 'Checked-in';
+      case GuestStatus.checkedOut:
+        return 'Checked-out';
+    }
+  }
+
+  static Color getStatusColor(GuestStatus status) {
+    switch (status) {
+      case GuestStatus.booked:
+        return Colors.orange;
+      case GuestStatus.checkedIn:
+        return Colors.green;
+      case GuestStatus.checkedOut:
+        return Colors.red;
+    }
+  }
+
+  static DateTime? parseDate(dynamic v) {
+    if (v == null) return null;
+    if (v is DateTime) return v;
+    if (v is String) return DateTime.tryParse(v);
+    return null;
+  }
+
+  void _showFoodLoggingDialog(int logId) {
+    showDialog(
+      context: context,
+      builder: (_) => ServiceLoggingDialog(logId: logId),
+    );
+  }
+
+  Widget _buildPopupMenu(int id, Map<String, dynamic> log) {
+    final controller = HotelController.to;
+    final status = getGuestStatus(log);
+
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert),
+      onSelected: (value) async {
+        switch (value) {
+          case 'calculate_bill':
+            final didUpdate = await showDialog(
+              context: context,
+              builder: (_) => CalculateBillDialog(logId: id),
+            );
+            if (didUpdate == true) {
+              await controller.refreshGuestData();
+            }
+            break;
+
+          case 'delete':
+            await controller.deleteGuestLog(id);
+            await controller.refreshGuestData();
+            break;
+        }
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(
+          value: 'calculate_bill',
+          child: Text('Calculate Bill'),
+        ),
+        if (status != GuestStatus.checkedOut)
+          const PopupMenuItem(
+            value: 'checkout',
+            child: Text('Update Check Out'),
+          ),
+        const PopupMenuDivider(),
+        const PopupMenuItem(
+          value: 'delete',
+          child: Text(
+            'Delete',
+            style: TextStyle(color: Colors.red),
+          ),
+        ),
+      ],
+    );
+  }
 }
+
 
 
 class AddServiceDialog extends StatefulWidget {

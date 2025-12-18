@@ -4,11 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
+enum GuestStatus { booked, checkedIn, checkedOut }
+
 class GuestLogCard extends StatelessWidget {
   final Map<String, dynamic> item;
   final VoidCallback onTap;
   final VoidCallback onFoodTap;
   final Widget popupMenu;
+
+  // ✅ NEW
+  final String statusLabel;
+  final Color statusColor;
 
   const GuestLogCard({
     super.key,
@@ -16,11 +22,12 @@ class GuestLogCard extends StatelessWidget {
     required this.onTap,
     required this.onFoodTap,
     required this.popupMenu,
+    required this.statusLabel,
+    required this.statusColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final status = _getGuestStatus(item);
     final dateRange = _buildDateRange(item);
 
     return Container(
@@ -38,9 +45,7 @@ class GuestLogCard extends StatelessWidget {
         ],
       ),
       child: InkWell(
-        onTap: (){
-          onTap();
-        },
+        onTap: onTap,
         child: Column(
           children: [
             Row(
@@ -72,7 +77,7 @@ class GuestLogCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                _buildStatusChip(status),
+                _buildStatusChip(statusLabel, statusColor),
               ],
             ),
             const SizedBox(height: 16),
@@ -101,72 +106,38 @@ class GuestLogCard extends StatelessWidget {
     );
   }
 
-  // ---------------- HELPERS ----------------
+  // ---------------- UI HELPERS ----------------
 
-  static String _getGuestStatus(Map<String, dynamic> item) {
-    return item['status'] ?? 'Checked-in';
+  static Widget _buildStatusChip(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha:0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
+          color: color,
+        ),
+      ),
+    );
   }
-
-
-  static DateTime? parseDate(dynamic v) {
-    if (v == null) return null;
-    if (v is DateTime) return v;
-    if (v is String) return DateTime.tryParse(v);
-    return null;
-  }
-
-
-  // DateTime? parseDate(dynamic v) {
-  //   if (v == null) return null;
-  //   if (v is DateTime) return v;
-  //   if (v is String) return DateTime.tryParse(v);
-  //   return null;
-  // }
-
 
   static String _buildDateRange(Map<String, dynamic> item) {
     try {
       final a = DateTime.parse(item['arrivalDate']);
       final c =
           item['checkOutDate'] != null && item['checkOutDate'] != ''
-              ? item['checkOutDate']
+              ? DateTime.parse(item['checkOutDate'])
               : a.add(const Duration(days: 1));
 
       return '${DateFormat('MMM d').format(a)} - ${DateFormat('MMM d').format(c)}';
     } catch (_) {
       return 'Invalid date';
     }
-  }
-
-  static Widget _buildStatusChip(String status) {
-    Color bg;
-    Color fg;
-
-    switch (status) {
-      case 'Checked-in':
-        bg = Colors.green.shade100;
-        fg = Colors.green.shade700;
-        break;
-      case 'Upcoming':
-        bg = Colors.orange.shade100;
-        fg = Colors.orange.shade700;
-        break;
-      default:
-        bg = Colors.red.shade100;
-        fg = Colors.red.shade700;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        status,
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: fg),
-      ),
-    );
   }
 
   static Widget _buildProfileImage(Uint8List? bytes) {
@@ -188,8 +159,7 @@ class GuestLogCard extends StatelessWidget {
     if (base64String == null || base64String.isEmpty) return null;
     try {
       return base64Decode(base64String);
-    } catch (e) {
-      print("Error decoding image: $e");
+    } catch (_) {
       return null;
     }
   }

@@ -1,5 +1,6 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:io';
-import 'package:booking_desktop/src/app_config/styles.dart';
 import 'package:booking_desktop/src/controllers/hotel_controller.dart';
 import 'package:booking_desktop/src/view/service/service_details_page.dart';
 import 'package:flutter/material.dart';
@@ -69,7 +70,6 @@ class _ServicesListPageState extends State<ServicesListPage> {
   ) {
     return allServices.where((service) {
       final serviceCategory = _getServiceCategory(service);
-      final isActive = service['active'].toString() == '1';
       final categoryMatch =
           _selectedFilter == 'All' || serviceCategory == _selectedFilter;
       final searchMatch =
@@ -117,7 +117,7 @@ class _ServicesListPageState extends State<ServicesListPage> {
                               (service) =>
                                   _buildServiceTableRow(context, service),
                             )
-                            .toList(),
+                            ,
                     ],
                   ),
                 ),

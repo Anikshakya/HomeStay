@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:booking_desktop/src/controllers/hotel_controller.dart';
 import 'package:booking_desktop/src/app_database/app_db.dart';
 
 class CalculateBillDialog extends StatefulWidget {
@@ -13,7 +12,6 @@ class CalculateBillDialog extends StatefulWidget {
 }
 
 class _CalculateBillDialogState extends State<CalculateBillDialog> {
-  final _controller = HotelController.to;
   final _db = DatabaseRepo();
 
   Map<String, dynamic>? _roomDetails; // Room info with check-in/out
@@ -124,8 +122,14 @@ class _CalculateBillDialogState extends State<CalculateBillDialog> {
               : SizedBox(
                 width: 500,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Services Consumed
+                    const Text(
+                      'Room Details',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     // Room Info
                     if (_roomDetails != null) ...[
                       Row(
@@ -161,7 +165,7 @@ class _CalculateBillDialogState extends State<CalculateBillDialog> {
 
                     // Services Consumed
                     const Text(
-                      'Services:',
+                      'Services Used',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     SizedBox(
@@ -268,7 +272,7 @@ class _CalculateBillDialogState extends State<CalculateBillDialog> {
 
             Get.back(result: true);
           },
-          child: const Text('Save / Print'),
+          child: const Text('Confirm Check Out'),
         ),
       ],
     );

@@ -403,6 +403,7 @@ class DashboardTab extends StatelessWidget {
                     decoration: BoxDecoration(
                       color:
                           isHover
+                              // ignore: dead_code
                               ? Colors.grey.withValues(alpha:0.05)
                               : Colors.white,
                     ),

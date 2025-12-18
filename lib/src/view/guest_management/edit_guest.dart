@@ -30,7 +30,7 @@ class _EditGuestDialogState extends State<EditGuestDialog> {
   File? _citizenImage;
   bool _loading = true;
 
-  RxList<RxMap<String, dynamic>> _roomSelections =
+  final RxList<RxMap<String, dynamic>> _roomSelections =
       <RxMap<String, dynamic>>[].obs;
 
   @override
@@ -236,6 +236,7 @@ class _EditGuestDialogState extends State<EditGuestDialog> {
     await controller.updateGuestLog(widget.logId, updatedData, items);
 
     Get.snackbar('Success', 'Guest updated');
+    // ignore: use_build_context_synchronously
     Navigator.pop(context, true);
   }
 
@@ -250,359 +251,365 @@ class _EditGuestDialogState extends State<EditGuestDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      child:
-          _loading
-              ? SizedBox(
-                height: 200,
-                child: Center(child: CircularProgressIndicator()),
-              )
-              : SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Edit Guest',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _textField('Full Name', _nameC),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _textField('Contact Number', _contactC),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(child: _textField('Address', _addressC)),
-                      ],
-                    ),
-                    _textField('Occupation', _occupationC),
-                    _textField('Relation With Partner', _relationC),
-                    _textField('Reason Of Stay', _reasonC),
-                    _textField('No. of Guests', _guestCount),
-                    _textField('Overall Discount (Rs)', _discountC),
-                    _textField('Extra Charges (Rs)', _extraChargeC),
-                    _textField('Charge Reason', _chargeReasonC),
-                    const SizedBox(height: 16),
-                    const Text('ID Proof'),
-                    const SizedBox(height: 8),
-                    InkWell(
-                      onTap: _pickImage,
-                      child: Container(
-                        height: 120,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Center(
-                          child:
-                              _citizenImage == null
-                                  ? const Text('Click to upload ID')
-                                  : Image.file(
-                                    _citizenImage!,
-                                    fit: BoxFit.cover,
-                                  ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.40,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+            child: _loading
+                ? SizedBox(
+                  height: 200,
+                  child: Center(child: CircularProgressIndicator()),
+                )
+                : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Edit Guest',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text('Select Rooms & Check-in/Check-out'),
-                    const SizedBox(height: 8),
-                    Obx(() {
-                      final rooms = controller.rooms;
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 16),
+                      _textField('Full Name', _nameC),
+                      Row(
                         children: [
-                          ...List.generate(_roomSelections.length, (index) {
-                            final selection = _roomSelections[index];
-                            final discountController = TextEditingController(
-                              text: selection['discount']?.toString() ?? '0',
-                            );
-                            discountController.addListener(() {
-                              selection['discount'] =
-                                  int.tryParse(discountController.text) ?? 0;
-                            });
-
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Room ${index + 1}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 15,
-                                            color: Colors.blue,
-                                          ),
-                                        ),
-                                        if (_roomSelections.length > 1)
-                                          IconButton(
-                                            icon: const Icon(
-                                              Icons.delete_outline,
-                                              color: Colors.red,
-                                            ),
-                                            onPressed: () => _removeRoom(index),
-                                          ),
-                                      ],
+                          Expanded(
+                            child: _textField('Contact Number', _contactC),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(child: _textField('Address', _addressC)),
+                        ],
+                      ),
+                      _textField('Occupation', _occupationC),
+                      _textField('Relation With Partner', _relationC),
+                      _textField('Reason Of Stay', _reasonC),
+                      _textField('No. of Guests', _guestCount),
+                      _textField('Overall Discount (Rs)', _discountC),
+                      _textField('Extra Charges (Rs)', _extraChargeC),
+                      _textField('Charge Reason', _chargeReasonC),
+                      const SizedBox(height: 16),
+                      const Text('ID Proof'),
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: _pickImage,
+                        child: Container(
+                          height: 120,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child:
+                                _citizenImage == null
+                                    ? const Text('Click to upload ID')
+                                    : Image.file(
+                                      _citizenImage!,
+                                      fit: BoxFit.cover,
                                     ),
-                                    const SizedBox(height: 10),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: InkWell(
-                                            onTap:
-                                                () => _selectDate(index, true),
-                                            child: Obx(
-                                              () => Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 14,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  border: Border.all(
-                                                    color: Colors.grey.shade300,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                                child: Text(
-                                                  selection['checkInDate'] !=
-                                                          null
-                                                      ? "${selection['checkInDate'].day}-${selection['checkInDate'].month}-${selection['checkInDate'].year}"
-                                                      : 'Check-in Date',
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: InkWell(
-                                            onTap:
-                                                () => _selectTime(index, true),
-                                            child: Obx(
-                                              () => Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 14,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  border: Border.all(
-                                                    color: Colors.grey.shade300,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                                child: Text(
-                                                  selection['checkInTime'] !=
-                                                          null
-                                                      ? (selection['checkInTime']
-                                                              as TimeOfDay)
-                                                          .format(context)
-                                                      : 'Check-in Time',
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: InkWell(
-                                            onTap:
-                                                () => _selectDate(index, false),
-                                            child: Obx(
-                                              () => Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 14,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  border: Border.all(
-                                                    color: Colors.grey.shade300,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                                child: Text(
-                                                  selection['checkOutDate'] !=
-                                                          null
-                                                      ? "${selection['checkOutDate'].day}-${selection['checkOutDate'].month}-${selection['checkOutDate'].year}"
-                                                      : 'Check-out Date',
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: InkWell(
-                                            onTap:
-                                                () => _selectTime(index, false),
-                                            child: Obx(
-                                              () => Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 14,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  border: Border.all(
-                                                    color: Colors.grey.shade300,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                                child: Text(
-                                                  selection['checkOutTime'] !=
-                                                          null
-                                                      ? (selection['checkOutTime']
-                                                              as TimeOfDay)
-                                                          .format(context)
-                                                      : 'Check-out Time',
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 10),
-                                    DropdownButtonFormField<String>(
-                                      value:
-                                          selection['roomId'] != ''
-                                              ? selection['roomId']
-                                              : null,
-                                      hint: const Text('Select Room'),
-                                      decoration: InputDecoration(
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                      ),
-                                      items:
-                                          rooms.map((r) {
-                                            final availability =
-                                                _getRoomAvailability(
-                                                  room: r,
-                                                  checkInDate:
-                                                      selection['checkInDate'],
-                                                  checkOutDate:
-                                                      selection['checkOutDate'],
-                                                );
-
-                                            return DropdownMenuItem<String>(
-                                              value: r['id'],
-                                              enabled: availability.selectable,
-                                              child: Row(
-                                                children: [
-                                                  Text(
-                                                    r['number'] ?? 'Unknown',
-                                                    style: TextStyle(
-                                                      color:
-                                                          availability
-                                                                  .selectable
-                                                              ? Colors.black
-                                                              : Colors.grey,
-                                                    ),
-                                                  ),
-                                                  if (!availability
-                                                      .selectable) ...[
-                                                    const SizedBox(width: 8),
-                                                    Text(
-                                                      availability.reason ==
-                                                              'Inactive'
-                                                          ? '(Inactive)'
-                                                          : availability
-                                                                  .bookingStatus !=
-                                                              null
-                                                          ? '(${availability.bookingStatus})'
-                                                          : '(Unavailable)',
-                                                      style: TextStyle(
-                                                        color:
-                                                            availability.reason ==
-                                                                    'Inactive'
-                                                                ? Colors.orange
-                                                                : Colors.red,
-                                                        fontSize: 12,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ],
-                                              ),
-                                            );
-                                          }).toList(),
-                                      onChanged: (v) {
-                                        if (v != null) selection['roomId'] = v;
-                                      },
-                                    ),
-                                    const SizedBox(height: 12),
-                                    TextField(
-                                      controller: discountController,
-                                      decoration: InputDecoration(
-                                        labelText: 'Discount (%)',
-                                        prefixIcon: const Icon(
-                                          Icons.local_offer,
-                                        ),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                      ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Select Rooms & Check-in/Check-out'),
+                      const SizedBox(height: 8),
+                      Obx(() {
+                        final rooms = controller.rooms;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ...List.generate(_roomSelections.length, (index) {
+                              final selection = _roomSelections[index];
+                              final discountController = TextEditingController(
+                                text: selection['discount']?.toString() ?? '0',
+                              );
+                              discountController.addListener(() {
+                                selection['discount'] =
+                                    int.tryParse(discountController.text) ?? 0;
+                              });
+            
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha:0.08),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
                                     ),
                                   ],
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
-                              ),
-                            );
-                          }),
-                          TextButton.icon(
-                            onPressed: _addRoom,
-                            icon: const Icon(Icons.add),
-                            label: const Text('Add Another Room'),
-                          ),
-                        ],
-                      );
-                    }),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _save,
-                        child: const Text('Save Changes'),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            'Room ${index + 1}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                              color: Colors.blue,
+                                            ),
+                                          ),
+                                          if (_roomSelections.length > 1)
+                                            IconButton(
+                                              icon: const Icon(
+                                                Icons.delete_outline,
+                                                color: Colors.red,
+                                              ),
+                                              onPressed: () => _removeRoom(index),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: InkWell(
+                                              onTap:
+                                                  () => _selectDate(index, true),
+                                              child: Obx(
+                                                () => Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 14,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    border: Border.all(
+                                                      color: Colors.grey.shade300,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                  ),
+                                                  child: Text(
+                                                    selection['checkInDate'] !=
+                                                            null
+                                                        ? "${selection['checkInDate'].day}-${selection['checkInDate'].month}-${selection['checkInDate'].year}"
+                                                        : 'Check-in Date',
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: InkWell(
+                                              onTap:
+                                                  () => _selectTime(index, true),
+                                              child: Obx(
+                                                () => Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 14,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    border: Border.all(
+                                                      color: Colors.grey.shade300,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                  ),
+                                                  child: Text(
+                                                    selection['checkInTime'] !=
+                                                            null
+                                                        ? (selection['checkInTime']
+                                                                as TimeOfDay)
+                                                            .format(context)
+                                                        : 'Check-in Time',
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: InkWell(
+                                              onTap:
+                                                  () => _selectDate(index, false),
+                                              child: Obx(
+                                                () => Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 14,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    border: Border.all(
+                                                      color: Colors.grey.shade300,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                  ),
+                                                  child: Text(
+                                                    selection['checkOutDate'] !=
+                                                            null
+                                                        ? "${selection['checkOutDate'].day}-${selection['checkOutDate'].month}-${selection['checkOutDate'].year}"
+                                                        : 'Check-out Date',
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: InkWell(
+                                              onTap:
+                                                  () => _selectTime(index, false),
+                                              child: Obx(
+                                                () => Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 14,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    border: Border.all(
+                                                      color: Colors.grey.shade300,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                  ),
+                                                  child: Text(
+                                                    selection['checkOutTime'] !=
+                                                            null
+                                                        ? (selection['checkOutTime']
+                                                                as TimeOfDay)
+                                                            .format(context)
+                                                        : 'Check-out Time',
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      DropdownButtonFormField<String>(
+                                        value:
+                                            selection['roomId'] != ''
+                                                ? selection['roomId']
+                                                : null,
+                                        hint: const Text('Select Room'),
+                                        decoration: InputDecoration(
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                        ),
+                                        items:
+                                            rooms.map((r) {
+                                              final availability =
+                                                  _getRoomAvailability(
+                                                    room: r,
+                                                    checkInDate:
+                                                        selection['checkInDate'],
+                                                    checkOutDate:
+                                                        selection['checkOutDate'],
+                                                  );
+            
+                                              return DropdownMenuItem<String>(
+                                                value: r['id'],
+                                                enabled: availability.selectable,
+                                                child: Row(
+                                                  children: [
+                                                    Text(
+                                                      r['number'] ?? 'Unknown',
+                                                      style: TextStyle(
+                                                        color:
+                                                            availability
+                                                                    .selectable
+                                                                ? Colors.black
+                                                                : Colors.grey,
+                                                      ),
+                                                    ),
+                                                    if (!availability
+                                                        .selectable) ...[
+                                                      const SizedBox(width: 8),
+                                                      Text(
+                                                        availability.reason ==
+                                                                'Inactive'
+                                                            ? '(Inactive)'
+                                                            : availability
+                                                                    .bookingStatus !=
+                                                                null
+                                                            ? '(${availability.bookingStatus})'
+                                                            : '(Unavailable)',
+                                                        style: TextStyle(
+                                                          color:
+                                                              availability.reason ==
+                                                                      'Inactive'
+                                                                  ? Colors.orange
+                                                                  : Colors.red,
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                              );
+                                            }).toList(),
+                                        onChanged: (v) {
+                                          if (v != null) selection['roomId'] = v;
+                                        },
+                                      ),
+                                      const SizedBox(height: 12),
+                                      TextField(
+                                        controller: discountController,
+                                        decoration: InputDecoration(
+                                          labelText: 'Discount (%)',
+                                          prefixIcon: const Icon(
+                                            Icons.local_offer,
+                                          ),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }),
+                            TextButton.icon(
+                              onPressed: _addRoom,
+                              icon: const Icon(Icons.add),
+                              label: const Text('Add Another Room'),
+                            ),
+                          ],
+                        );
+                      }),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _save,
+                          child: const Text('Save Changes'),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+          ),
     );
   }
 
@@ -628,8 +635,9 @@ class _EditGuestDialogState extends State<EditGuestDialog> {
       return RoomAvailability(selectable: false, reason: 'Inactive');
     }
 
-    if (checkInDate == null || checkOutDate == null)
+    if (checkInDate == null || checkOutDate == null) {
       return RoomAvailability(selectable: true);
+    }
 
     for (final b in controller.bookingItems) {
       if (b['roomId'].toString() != room['id'].toString()) continue;

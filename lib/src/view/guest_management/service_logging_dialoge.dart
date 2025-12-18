@@ -1,7 +1,6 @@
 import 'package:booking_desktop/src/app_database/app_db.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:booking_desktop/src/controllers/hotel_controller.dart';
 
 class ServiceLoggingDialog extends StatefulWidget {
   final int logId; // Guest log ID
@@ -12,7 +11,6 @@ class ServiceLoggingDialog extends StatefulWidget {
 }
 
 class _ServiceLoggingDialogState extends State<ServiceLoggingDialog> {
-  final _controller = HotelController.to;
   final _db = DatabaseRepo();
 
   List<Map<String, dynamic>> _services = [];
@@ -144,8 +142,7 @@ class _ServiceLoggingDialogState extends State<ServiceLoggingDialog> {
                             child: ListTile(
                               title: Text(service['name']),
                               subtitle: Text(
-                                'Price: ${service['price']}' +
-                                    (isActive ? '' : ' (Inactive)'),
+                                'Price: ${service['price']}${isActive ? '' : ' (Inactive)'}',
                               ),
                               trailing: SizedBox(
                                 width: 140,
